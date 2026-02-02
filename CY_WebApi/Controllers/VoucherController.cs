@@ -86,7 +86,7 @@ namespace CY_WebApi.Controllers
             foreach (var item in voucher.Items)
             {
                 var currenAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-                if (currenAccount == null) BadRequest("account not found");
+                if (currenAccount == null) return BadRequest("account not found");
                 currenAccount.MandehHesab = currenAccount.MandehHesab + item.Debit - item.Credit;
                 item.MandehHesab = currenAccount.MandehHesab;
 

@@ -7,6 +7,7 @@ using CY_WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Dynamic.Core;
+using ClosedXML.Excel;
 
 namespace CY_WebApi.Controllers
 {
@@ -638,9 +639,71 @@ namespace CY_WebApi.Controllers
             breadCrumList.Add(productcategoryB.Name);
             return Ok(breadCrumList);
         }
-    
-    
-    
-    
+      
+        
+        [HttpGet("getExellFromProduct")]    
+        public async Task<IActionResult> getExellFromProduct()
+    {
+        var products = await _db.CyProduct
+            .Where(x => x.IsVisible
+                && x.CyProductCategoryId != null
+                && x.CyCategoryId != null
+                && x.Supply>0
+                )
+            .Select(s => new
+            {
+                s.ID,
+                s.Name,
+                s.Supply,
+                s.Price,
+                s.CyManufacturerId,
+                s.CyProductCategoryId,
+                s.CyCategoryId,
+            })
+            .ToListAsync();
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Products");
+
+        // Header
+        worksheet.Cell(1, 1).Value = "ID";
+        worksheet.Cell(1, 2).Value = "name";
+        worksheet.Cell(1, 3).Value = "supply ";
+        worksheet.Cell(1, 4).Value = " price";
+        worksheet.Cell(1, 5).Value = "manufacturId ";
+        worksheet.Cell(1, 6).Value = " proCategoryId";
+        worksheet.Cell(1, 7).Value = "categoryId";
+
+        // Data
+        int row = 2;
+        foreach (var item in products)
+        {
+            worksheet.Cell(row, 1).Value = item.ID;
+            worksheet.Cell(row, 2).Value = item.Name;
+            worksheet.Cell(row, 3).Value = item.Supply;
+            worksheet.Cell(row, 4).Value = item.Price;
+            worksheet.Cell(row, 5).Value = item.CyManufacturerId;
+            worksheet.Cell(row, 6).Value = item.CyProductCategoryId;
+            worksheet.Cell(row, 7).Value = item.CyCategoryId;
+            row++;
+        }
+
+        // Auto fit columns
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        return File(
+            stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Products.xlsx"
+        );
     }
+
+
+
+
+}
 }

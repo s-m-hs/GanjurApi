@@ -179,7 +179,7 @@ namespace CY_WebApi.Controllers
 
             // 2. محاسبه مانده حساب
             var balance = await _db.VoucherItem
-                .Where(v => v.AccountId == AccountId)
+                .Where(v => v.IsVisible && v.AccountId == AccountId )
                 .SumAsync(v => v.Debit - v.Credit);
 
             // 3. خروجی
@@ -191,23 +191,31 @@ namespace CY_WebApi.Controllers
 
 
 
-            var AllAccounts = await _db.Account.Where(x => x.IsVisible && x.ID == 32).ToListAsync();
+            var AllAccounts = await _db.Account.Where(x => x.IsVisible ).ToListAsync();
 
 
-
-            var currentVouchurs =  _db.VoucherItem.Where(x => x.IsVisible && x.AccountId == AccountId).Include(u => u.Voucher).Include(i => i.Account).OrderBy(o => o.ID).AsQueryable();
+            ////در این قسمت 
+            ////isvisible 
+            ////قرار نمیدهیم به خاطر اسنادی که حذف شده اند 
+            var currentVouchurs =  _db.VoucherItem.Where(x => x.AccountId == AccountId).Include(u => u.Voucher).Include(i => i.Account).OrderBy(o => o.ID).AsQueryable();
 
             var isEditedVoItem = currentVouchurs.Where(x => x.IsEdited == true).FirstOrDefault();
 
             if(isEditedVoItem != null )
             {
-             
-                    double mandeh = 0;
-                    foreach (var item1 in currentVouchurs)
+                var avalbleItems =await currentVouchurs.Where(x => x.IsVisible).ToArrayAsync();
+
+                foreach (var item1 in currentVouchurs)
+                {
+
+                    item1.IsEdited = false;
+                }
+                    
+                double mandeh = 0;
+                    foreach (var item1 in avalbleItems)
                     {
                         mandeh = mandeh + item1.Debit - item1.Credit;
                         item1.MandehHesab = mandeh;
-                        item1.IsEdited = false;
                     }
 
                 
@@ -215,7 +223,8 @@ namespace CY_WebApi.Controllers
             }
             await _db.SaveChangesAsync();
 
-        var resultB= await currentVouchurs?.Select(x => new
+
+        var resultB= await currentVouchurs?.Where(x=>x.IsVisible).Select(x => new
                         {
                             Id = x.ID,
                             Debit = x.Debit,

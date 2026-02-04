@@ -70,6 +70,7 @@ namespace CY_BM
     }
     public class VoucherItemDTOB
     {
+        public int ID { get; set; }
         public DateTime CreatDate { get; set; } = DateTime.Now;
         public DateTime VoucherDate { get; set; }
 

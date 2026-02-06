@@ -123,7 +123,7 @@ namespace CY_WebApi.Controllers
 
             // 2. محاسبه مانده حساب
             var balance = await _db.VoucherItem
-                .Where(v => v.AccountId == accountId)
+                .Where(v =>v.IsVisible && v.AccountId == accountId)
                 .SumAsync(v => v.Debit - v.Credit);
 
             // 3. خروجی
@@ -168,7 +168,7 @@ namespace CY_WebApi.Controllers
 
             // 2. محاسبه مانده حساب
             var balance = await _db.VoucherItem
-                .Where(v => v.AccountId == accountId)
+                .Where(v =>v.IsVisible && v.AccountId == accountId)
                 .SumAsync(v => v.Debit - v.Credit);
 
             // 3. خروجی
@@ -297,7 +297,7 @@ namespace CY_WebApi.Controllers
             foreach (var item in AllAccounts)
             {
                 var balance = await _db.VoucherItem
-                 .Where(v => v.AccountId == item.ID)
+                 .Where(v =>v.IsVisible &&  v.AccountId == item.ID)
                  .SumAsync(v => v.Debit - v.Credit);
 
                 // 3. خروجی

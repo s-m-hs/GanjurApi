@@ -19,6 +19,11 @@ namespace CY_BM
         public string? Description { get; set; }
         public string? ProductCode { get; set; }
         public double? Price { get; set; }
+        public double? ShopPrice { get; set; }
+        public double? Price2 { get; set; } 
+        public double? Price3 { get; set; } 
+        public double? Price4 { get; set; } 
+        public double? Price5 { get; set; } 
         public double? NoOffPrice { get; set; }
         public double? PartnerPrice { get; set; }
         public string? PartNo { get; set; }

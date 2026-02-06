@@ -221,7 +221,6 @@ namespace CY_WebApi.Controllers
                 var cySpec = ProductDTO.Spec.Select(c => _mapper.Map<CyProductSpec>(c)).ToList();
                 CyProduct.Specifications = cySpec;
             }
-
             CyProduct = await _repo.Insert(CyProduct);
 
             return CreatedAtAction("GetCyProduct", new { id = CyProduct.ID }, _mapper.Map<ProductDTO>(CyProduct));
@@ -702,8 +701,63 @@ namespace CY_WebApi.Controllers
         );
     }
 
+        [HttpGet("getExellFromManufcture")]
+        public async Task<IActionResult> getExellFromManufcture()
+        {
+            var products = await _db.CyManufacturer
+                .Where(x => x.IsVisible)
+                .Select(s => new
+                {
+                    s.ID,
+                    s.Name,
+                    s.Description,
+                    s.ImageUrl,
+                    s.Code
+     
+                })
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Products");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "ID";
+            worksheet.Cell(1, 2).Value = "name";
+            worksheet.Cell(1, 3).Value = "Code ";
+            worksheet.Cell(1, 4).Value = " Description";
+            worksheet.Cell(1, 5).Value = " ImageUrl";
+         
+
+            // Data
+            int row = 2;
+            foreach (var item in products)
+            {
+                worksheet.Cell(row, 1).Value = item.ID;
+                worksheet.Cell(row, 2).Value = item.Name;
+                worksheet.Cell(row, 3).Value = item.Code;
+                worksheet.Cell(row, 4).Value = item.Description;
+                worksheet.Cell(row, 5).Value = item.ImageUrl;
+    
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Products.xlsx"
+            );
+        }
 
 
 
-}
+
+
+    }
 }

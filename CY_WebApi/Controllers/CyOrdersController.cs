@@ -349,7 +349,8 @@ namespace CY_WebApi.Controllers
                 currentProduct.Supply += item.Quantity;
                 currentProduct.ShopPrice = item.UnitPrice;
 
-                currentProduct.Price = baePrice + (baePrice * 40 / 100);   ///15-2   20-3 30-4   40-1    
+                currentProduct.Price = baePrice + (baePrice * 40 / 100);   ///15-2   20-3 30-4   40-1  
+                currentProduct.NoOffPrice = baePrice + (baePrice * 40 / 100);
                 currentProduct.Price2 = baePrice + (baePrice * 15 / 100);   ///15-2   20-3 30-4   40-1    
                 currentProduct.Price3 = baePrice + (baePrice * 20 / 100);   ///15-2   20-3 30-4   40-1    
                 currentProduct.Price4 = baePrice + (baePrice * 30 / 100);   ///15-2   20-3 30-4   40-1    

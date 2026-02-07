@@ -59,46 +59,97 @@ namespace CY_WebApi.Controllers
             return Ok(voucher);
         }
 
-
-
         [HttpPost]
         public async Task<IActionResult> Create(VoucherDTO dto)
         {
             if (dto.Items.Sum(i => i.Debit) != dto.Items.Sum(i => i.Credit))
                 return BadRequest("سند تراز نیست");
 
+            using var tx = await _db.Database
+                .BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
-
-            var voucher = new Voucher
+            try
             {
-                VoucherDate = dto.VoucherDate,
-                Description = dto.Description,
-                ReferenceType = dto.ReferenceType,
-                ReferenceId = dto.ReferenceId,
-                Items = dto.Items.Select(i => new VoucherItem
+
+                var voucher = new Voucher
                 {
-                    AccountId = i.AccountId,
-                    ToAccountId = i.ToAccountId,
-                    Debit = i.Debit,
-                    Credit = i.Credit,
+                    VoucherDate = dto.VoucherDate,
+                    Description = dto.Description,
+                    ReferenceType = dto.ReferenceType,
+                    ReferenceId = dto.ReferenceId,
+                    Items = dto.Items.Select(i => new VoucherItem
+                    {
+                        AccountId = i.AccountId,
+                        ToAccountId = i.ToAccountId,
+                        Debit = i.Debit,
+                        Credit = i.Credit
+                    }).ToList()
+                };
 
-                }).ToList()
-            };
+                foreach (var item in voucher.Items)
+                {
+                    var account = await _db.Account
+                        .FirstOrDefaultAsync(x => x.IsVisible && x.ID == item.AccountId);
 
-            foreach (var item in voucher.Items)
-            {
-                var currenAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-                if (currenAccount == null) return BadRequest("account not found");
-                currenAccount.MandehHesab = currenAccount.MandehHesab + item.Debit - item.Credit;
-                item.MandehHesab = currenAccount.MandehHesab;
+                    if (account == null)
+                        return BadRequest("account not found");
 
+                    account.MandehHesab += item.Debit - item.Credit;
+                    item.MandehHesab = account.MandehHesab;
+                }
+
+                await _db.Voucher.AddAsync(voucher);
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return Ok(voucher);
             }
-
-            await _db.Voucher.AddAsync(voucher);
-            await _db.SaveChangesAsync();
-
-            return Ok(voucher);
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> Create(VoucherDTO dto)
+        //{
+        //    if (dto.Items.Sum(i => i.Debit) != dto.Items.Sum(i => i.Credit))
+        //        return BadRequest("سند تراز نیست");
+
+
+
+        //    var voucher = new Voucher
+        //    {
+        //        VoucherDate = dto.VoucherDate,
+        //        Description = dto.Description,
+        //        ReferenceType = dto.ReferenceType,
+        //        ReferenceId = dto.ReferenceId,
+        //        Items = dto.Items.Select(i => new VoucherItem
+        //        {
+        //            AccountId = i.AccountId,
+        //            ToAccountId = i.ToAccountId,
+        //            Debit = i.Debit,
+        //            Credit = i.Credit,
+
+        //        }).ToList()
+        //    };
+
+        //    foreach (var item in voucher.Items)
+        //    {
+        //        var currenAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
+        //        if (currenAccount == null) return BadRequest("account not found");
+        //        currenAccount.MandehHesab = currenAccount.MandehHesab + item.Debit - item.Credit;
+        //        item.MandehHesab = currenAccount.MandehHesab;
+
+        //    }
+
+        //    await _db.Voucher.AddAsync(voucher);
+        //    await _db.SaveChangesAsync();
+
+        //    return Ok(voucher);
+        //}
 
 
         [HttpPut("editeVoucher")]

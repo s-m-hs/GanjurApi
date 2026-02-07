@@ -273,7 +273,7 @@ namespace CY_WebApi.Controllers
             var voucheeItemS = await _db.VoucherItem.Where(x => x.IsVisible && x.Voucher.VoucherDate >= fromDate && x.Voucher.VoucherDate <= toDate && (x.AccountId == id || x.ToAccountId == id)).
                 Include(i => i.Account).Include(i => i.Voucher).Select(s => new VoucherItemDTO
                 {
-                    AccountId = s.ID,
+                    AccountId = s.AccountId,
                     ToAccountId = s.ToAccountId,
                     Debit = s.Debit,
                     Credit = s.Credit,

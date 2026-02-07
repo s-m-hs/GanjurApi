@@ -25,7 +25,7 @@ namespace CY_BM
         public DateTime CreatDate { get; set; } = DateTime.Now;
         public DateTime VoucherDate { get; set; }
 
-        public int AccountId { get; set; }
+        public int? AccountId { get; set; }
 
         public string? AccountName { get; set; }
         public bool? IsEdited { get; set; }

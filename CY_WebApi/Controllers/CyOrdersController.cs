@@ -35,137 +35,290 @@ namespace CY_WebApi.Controllers
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
+        /// 
         [HttpPost("addOrder")]
-        async public Task<ActionResult> addOrder([FromBody] OrderDTO dto, Ordermode ordermode)
+        public async Task<ActionResult> AddOrder(
+    [FromBody] OrderDTO dto,
+    Ordermode ordermode)
         {
-            if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
+            if (dto.OrderItems == null || !dto.OrderItems.Any())
+                return BadRequest(new { msg = "محصولی اضافه نشده است" });
 
-            var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
+            using var transaction =
+                await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
-            var order = _mapper.Map<CyOrder>(dto);
-
-            order.CreateDate = dto.CreatDate;
-
-            var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
-
-            order.OrderItems = orderItems;
-
-            var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply != 0).ToList();
-
-
-            ///بهای تمام شده محصولات ==مجموع قیمتهای خرید
-            double? shopPrice = 0;
-
-
-
-            ///کم کردن از موجودی کالا 
-            foreach (var item in dto.OrderItems)
+            try
             {
-                var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-                if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
+                #region User
+                var user = await _db.CyUser
+                    .Include(x => x.Account)
+                    .FirstOrDefaultAsync(x =>
+                        x.IsVisible && x.ID == dto.CyUserID);
 
+                if (user == null)
+                    return BadRequest(new { msg = "کاربر یافت نشد" });
+                #endregion
 
-                var currentProduct = query.Where(x => x.ID == item.ProductID && x.Supply >= item.Quantity).FirstOrDefault();
+                #region Products
+                var productIds = dto.OrderItems.Select(x => x.ProductID).ToList();
 
-                if (currentProduct == null) return BadRequest(new { msg = "موجودی کالا کمتر از تعداد وارد شده است ", product = item.PartNumber });
+                var products = await _db.CyProduct
+                    .Where(x => x.IsVisible && productIds.Contains(x.ID))
+                    .ToListAsync();
 
-                currentProduct.Supply -= item.Quantity;
-                shopPrice += currentProduct.ShopPrice;
-            }
+                double shopPrice = 0;
 
-
-            /////ثبت سند حسابداری
-            Voucher newVoucher = new Voucher()
-            {
-                VoucherDate = DateTime.Now,
-                ReferenceType = ordermode == Ordermode.SaleToCustomer ? "فاکتور فروش" : "فاکتور برگشت از خرید",
-                ReferenceId = 0,
-                Description = dto.StatusText,
-                Items =
+                foreach (var item in dto.OrderItems)
                 {
-                    ///////سند کسر از موجودی 
-                   
-                    ///کسر از موجودی کالا
-                    new VoucherItem{
-                        //AccountId=24,
-                        //ToAccountId=14,
+                    var product = products.FirstOrDefault(x => x.ID == item.ProductID);
 
-                        ////snDb2
-                        AccountId=AccountSnDb.MojodiKala,
-                        ToAccountId=AccountSnDb.BahayKala,
-                        Debit=0,
-                        Credit=shopPrice !=null ? (double)shopPrice : 0
-                    },
-                    
-                    ///ثبت هزینه بهای تمام‌شده کالای فروش‌رفته
-                    new VoucherItem
-                    {
-                        //AccountId=14,
-                        //ToAccountId=24,
+                    if (product == null)
+                        return BadRequest(new
+                        {
+                            msg = "محصول در انبار موجود نیست",
+                            product = item.PartNumber
+                        });
 
-                        ////snDb2
-                        AccountId=AccountSnDb.BahayKala,
-                        ToAccountId=AccountSnDb.MojodiKala,
-                        Debit=shopPrice !=null ? (double)shopPrice : 0,
-                        Credit=0
-                    }, 
+                    if (product.Supply < item.Quantity)
+                        return BadRequest(new
+                        {
+                            msg = "موجودی کالا کمتر از تعداد وارد شده است",
+                            product = item.PartNumber
+                        });
 
-
-
-                    ////ثبت سند مشتری 
-                    
-                    //بدهکار کردن مشتری
-                    new VoucherItem
-                    {
-                        //ToAccountId=15,
-                        AccountId=(int)user.AccountId,
-                        ToAccountId=AccountSnDb.DarAmad,
-                        Debit=(double)dto.FanalTotalAmount,
-                        Credit=0
-                    },
-                    ///ثبت درآمد
-                    new VoucherItem
-                    {
-                        //AccountId=15,
-                        AccountId=AccountSnDb.DarAmad,
-                        ToAccountId=(int)user.AccountId,
-                        Debit=0,
-                        Credit=(double)dto.FanalTotalAmount
-                    },
+                    product.Supply -= item.Quantity;
+                    shopPrice += (product.ShopPrice ?? 0) * item.Quantity;
                 }
-            };
+                #endregion
 
+                #region FactorNumber
+                int nextFactorNumber =
+                    (await _db.CyOrder.MaxAsync(x => (int?)x.FactorNumber)) ?? 0;
+                nextFactorNumber++;
+                #endregion
 
-            foreach (var item in newVoucher.Items)
+                #region Order
+                var order = _mapper.Map<CyOrder>(dto);
+                order.CreateDate = dto.CreatDate;
+                order.FactorNumber = nextFactorNumber;
+                order.OrderMode = ordermode;
+
+                order.OrderItems = _mapper
+                    .Map<List<CyOrderItem>>(dto.OrderItems);
+
+                await _db.CyOrder.AddAsync(order);
+                #endregion
+
+                #region Voucher
+                var voucher = new Voucher
+                {
+                    VoucherDate = DateTime.Now,
+                    ReferenceType = ordermode == Ordermode.SaleToCustomer
+                        ? "فاکتور فروش"
+                        : "فاکتور برگشت از خرید",
+                    ReferenceId = nextFactorNumber,
+                    Description = dto.StatusText,
+                    Items = new List<VoucherItem>
             {
-                var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-                currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
-                item.MandehHesab = currentAccount.MandehHesab;
+                // کسر از موجودی کالا
+                new VoucherItem
+                {
+                    AccountId = AccountSnDb.MojodiKala,
+                    Debit = 0,
+                    Credit = shopPrice
+                },
 
+                // بهای تمام‌شده کالای فروش‌رفته
+                new VoucherItem
+                {
+                    AccountId = AccountSnDb.BahayKala,
+                    Debit = shopPrice,
+                    Credit = 0
+                },
+
+                // بدهکار کردن مشتری
+                new VoucherItem
+                {
+                    AccountId = user.AccountId.Value,
+                    Debit = (double)dto.FanalTotalAmount,
+                    Credit = 0
+                },
+
+                // ثبت درآمد
+                new VoucherItem
+                {
+                    AccountId = AccountSnDb.DarAmad,
+                    Debit = 0,
+                    Credit = (double)dto.FanalTotalAmount
+                }
             }
+                };
 
+                foreach (var item in voucher.Items)
+                {
+                    var account = await _db.Account
+                        .FirstAsync(x => x.IsVisible && x.ID == item.AccountId);
 
-            ////جنریت کردن کد فاکتور
-            int nextFactorNum = await _db.CyOrder
-           .Select(f => (int?)f.FactorNumber)
-           .MaxAsync() ?? 0;
-            nextFactorNum += 1;
-            order.FactorNumber = nextFactorNum;
-            order.OrderMode = ordermode;
+                    account.MandehHesab =
+                        account.MandehHesab + item.Debit - item.Credit;
 
-            await _db.CyOrderItem.AddRangeAsync(orderItems);
-            await _db.CyOrder.AddAsync(order);
+                    item.MandehHesab = account.MandehHesab;
+                }
 
-            newVoucher.ReferenceId = order.FactorNumber;
+                await _db.Voucher.AddAsync(voucher);
+                #endregion
 
-            await _db.AddRangeAsync(newVoucher.Items);
-            await _db.Voucher.AddAsync(newVoucher);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-
-            await _db.SaveChangesAsync();
-
-            return Ok(new { order = order, factoNumber = nextFactorNum });
+                return Ok(new
+                {
+                    orderId = order.ID,
+                    factorNumber = nextFactorNumber
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new
+                {
+                    msg = "خطا در ثبت فاکتور",
+                    error = ex.Message
+                });
+            }
         }
+
+        //[HttpPost("addOrder")]
+        //async public Task<ActionResult> addOrder([FromBody] OrderDTO dto, Ordermode ordermode)
+        //{
+        //    if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
+
+        //    var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
+
+        //    var order = _mapper.Map<CyOrder>(dto);
+
+        //    order.CreateDate = dto.CreatDate;
+
+        //    var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
+
+        //    order.OrderItems = orderItems;
+
+        //    var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply != 0).ToList();
+
+
+        //    ///بهای تمام شده محصولات ==مجموع قیمتهای خرید
+        //    double? shopPrice = 0;
+
+
+
+        //    ///کم کردن از موجودی کالا 
+        //    foreach (var item in dto.OrderItems)
+        //    {
+        //        var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
+        //        if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
+
+
+        //        var currentProduct = query.Where(x => x.ID == item.ProductID && x.Supply >= item.Quantity).FirstOrDefault();
+
+        //        if (currentProduct == null) return BadRequest(new { msg = "موجودی کالا کمتر از تعداد وارد شده است ", product = item.PartNumber });
+
+        //        currentProduct.Supply -= item.Quantity;
+        //        shopPrice += currentProduct.ShopPrice;
+        //    }
+
+
+        //    /////ثبت سند حسابداری
+        //    Voucher newVoucher = new Voucher()
+        //    {
+        //        VoucherDate = DateTime.Now,
+        //        ReferenceType = ordermode == Ordermode.SaleToCustomer ? "فاکتور فروش" : "فاکتور برگشت از خرید",
+        //        ReferenceId = 0,
+        //        Description = dto.StatusText,
+        //        Items =
+        //        {
+        //            ///////سند کسر از موجودی 
+
+        //            ///کسر از موجودی کالا
+        //            new VoucherItem{
+        //                //AccountId=24,
+        //                //ToAccountId=14,
+
+        //                ////snDb2
+        //                AccountId=AccountSnDb.MojodiKala,
+        //                ToAccountId=AccountSnDb.BahayKala,
+        //                Debit=0,
+        //                Credit=shopPrice !=null ? (double)shopPrice : 0
+        //            },
+
+        //            ///ثبت هزینه بهای تمام‌شده کالای فروش‌رفته
+        //            new VoucherItem
+        //            {
+        //                //AccountId=14,
+        //                //ToAccountId=24,
+
+        //                ////snDb2
+        //                AccountId=AccountSnDb.BahayKala,
+        //                ToAccountId=AccountSnDb.MojodiKala,
+        //                Debit=shopPrice !=null ? (double)shopPrice : 0,
+        //                Credit=0
+        //            }, 
+
+
+
+        //            ////ثبت سند مشتری 
+
+        //            //بدهکار کردن مشتری
+        //            new VoucherItem
+        //            {
+        //                //ToAccountId=15,
+        //                AccountId=(int)user.AccountId,
+        //                ToAccountId=AccountSnDb.DarAmad,
+        //                Debit=(double)dto.FanalTotalAmount,
+        //                Credit=0
+        //            },
+        //            ///ثبت درآمد
+        //            new VoucherItem
+        //            {
+        //                //AccountId=15,
+        //                AccountId=AccountSnDb.DarAmad,
+        //                ToAccountId=(int)user.AccountId,
+        //                Debit=0,
+        //                Credit=(double)dto.FanalTotalAmount
+        //            },
+        //        }
+        //    };
+
+
+        //    foreach (var item in newVoucher.Items)
+        //    {
+        //        var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
+        //        currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
+        //        item.MandehHesab = currentAccount.MandehHesab;
+
+        //    }
+
+
+        //    ////جنریت کردن کد فاکتور
+        //    int nextFactorNum = await _db.CyOrder
+        //   .Select(f => (int?)f.FactorNumber)
+        //   .MaxAsync() ?? 0;
+        //    nextFactorNum += 1;
+        //    order.FactorNumber = nextFactorNum;
+        //    order.OrderMode = ordermode;
+
+        //    //await _db.CyOrderItem.AddRangeAsync(orderItems);
+        //    await _db.CyOrder.AddAsync(order);
+
+        //    newVoucher.ReferenceId = order.FactorNumber;
+
+        //    await _db.AddRangeAsync(newVoucher.Items);
+        //    await _db.Voucher.AddAsync(newVoucher);
+
+
+        //    await _db.SaveChangesAsync();
+
+        //    return Ok(new { order = order, factoNumber = nextFactorNum });
+        //}
 
 
 
@@ -305,124 +458,258 @@ namespace CY_WebApi.Controllers
 
         }
 
+        [HttpPost("addOrderB")]
+        public async Task<ActionResult> AddOrderB(
+    [FromBody] OrderDTO dto,
+    Ordermode ordermode)
+        {
+            if (dto.OrderItems == null || !dto.OrderItems.Any())
+                return BadRequest(new { msg = "محصولی اضافه نشده است" });
+
+            using var tx = await _db.Database
+                .BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                #region User
+                var user = await _db.CyUser
+                    .Include(x => x.Account)
+                    .FirstOrDefaultAsync(x =>
+                        x.IsVisible && x.ID == dto.CyUserID);
+
+                if (user == null)
+                    return BadRequest("تأمین‌کننده یافت نشد");
+                #endregion
+
+                #region Products
+                var productIds = dto.OrderItems.Select(x => x.ProductID).ToList();
+
+                var products = await _db.CyProduct
+                    .Where(x =>
+                        x.IsVisible &&
+                        x.CyProductCategoryId != null &&
+                        productIds.Contains(x.ID))
+                    .ToListAsync();
+
+                foreach (var item in dto.OrderItems)
+                {
+                    var product = products.FirstOrDefault(x => x.ID == item.ProductID);
+                    if (product == null)
+                        return BadRequest(new
+                        {
+                            msg = "محصول در انبار موجود نیست",
+                            product = item.PartNumber
+                        });
+
+                    double basePrice = item.UnitPrice;
+
+                    product.Supply += item.Quantity;
+                    product.ShopPrice = basePrice;
+
+                    product.Price = basePrice * 1.40;
+                    product.NoOffPrice = basePrice * 1.40;
+                    product.Price2 = basePrice * 1.15;
+                    product.Price3 = basePrice * 1.20;
+                    product.Price4 = basePrice * 1.30;
+                }
+                #endregion
+
+                #region FactorNumber
+                int nextFactorNumber =
+                    (await _db.CyOrder.MaxAsync(x => (int?)x.FactorNumber)) ?? 0;
+                nextFactorNumber++;
+                #endregion
+
+                #region Order
+                var order = _mapper.Map<CyOrder>(dto);
+                order.CreateDate = dto.CreatDate;
+                order.FactorNumber = nextFactorNumber;
+                order.OrderMode = ordermode;
+
+                order.OrderItems =
+                    _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
+
+                await _db.CyOrder.AddAsync(order);
+                #endregion
+
+                #region Voucher
+                var voucher = new Voucher
+                {
+                    VoucherDate = DateTime.Now,
+                    ReferenceType = ordermode == Ordermode.ShopFromCustomer
+                        ? "فاکتور خرید"
+                        : "فاکتور برگشت از فروش",
+                    ReferenceId = nextFactorNumber,
+                    Description = dto.StatusText,
+                    Items = new List<VoucherItem>
+            {
+                // افزودن به موجودی کالا
+                new VoucherItem
+                {
+                    AccountId = AccountSnDb.MojodiKala,
+                    Debit = (double)dto.FanalTotalAmount,
+                    Credit = 0
+                },
+
+                // بستانکار کردن تأمین‌کننده
+                new VoucherItem
+                {
+                    AccountId = user.AccountId.Value,
+                    Debit = 0,
+                    Credit = (double)dto.FanalTotalAmount
+                }
+            }
+                };
+
+                foreach (var item in voucher.Items)
+                {
+                    var account = await _db.Account
+                        .FirstAsync(x => x.IsVisible && x.ID == item.AccountId);
+
+                    account.MandehHesab += item.Debit - item.Credit;
+                    item.MandehHesab = account.MandehHesab;
+                }
+
+                await _db.Voucher.AddAsync(voucher);
+                #endregion
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return Ok(new
+                {
+                    orderId = order.ID,
+                    factorNumber = nextFactorNumber
+                });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return StatusCode(500, new
+                {
+                    msg = "خطا در ثبت فاکتور خرید",
+                    error = ex.Message
+                });
+            }
+        }
+
         /// <summary>
         /// فاکتورخرید
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpPost("addOrderB")]
-        async public Task<ActionResult> addOrderB([FromBody] OrderDTO dto, Ordermode ordermode)
-        {
-            if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
+        //[HttpPost("addOrderB")]
+        //async public Task<ActionResult> addOrderB([FromBody] OrderDTO dto, Ordermode ordermode)
+        //{
+        //    if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
 
-            var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
+        //    var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
 
-            var order = _mapper.Map<CyOrder>(dto);
+        //    var order = _mapper.Map<CyOrder>(dto);
 
-            order.CreateDate = dto.CreatDate;
-
-
-            var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
+        //    order.CreateDate = dto.CreatDate;
 
 
-
-            order.OrderItems = orderItems;
-
-            var query = _db.CyProduct.Where(x => x.IsVisible && x.CyProductCategoryId != null).ToList();
+        //    var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
 
 
 
+        //    order.OrderItems = orderItems;
 
-            ///اضافه کردن به موجودی کالا 
-            foreach (var item in dto.OrderItems)
-            {
-                var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-                if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
+        //    var query = _db.CyProduct.Where(x => x.IsVisible && x.CyProductCategoryId != null).ToList();
 
 
-                var currentProduct = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-
-                if (currentProduct == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
-
-                double baePrice = item.UnitPrice;
-
-                currentProduct.Supply += item.Quantity;
-                currentProduct.ShopPrice = item.UnitPrice;
-
-                currentProduct.Price = baePrice + (baePrice * 40 / 100);   ///15-2   20-3 30-4   40-1  
-                currentProduct.NoOffPrice = baePrice + (baePrice * 40 / 100);
-                currentProduct.Price2 = baePrice + (baePrice * 15 / 100);   ///15-2   20-3 30-4   40-1    
-                currentProduct.Price3 = baePrice + (baePrice * 20 / 100);   ///15-2   20-3 30-4   40-1    
-                currentProduct.Price4 = baePrice + (baePrice * 30 / 100);   ///15-2   20-3 30-4   40-1    
-
-            }
 
 
-            /////ثبت سند حسابداری
-            Voucher newVoucher = new Voucher()
-            {
-                VoucherDate = DateTime.Now,
-                ReferenceType = ordermode == Ordermode.ShopFromCustomer ? "فاکتور خرید" : "فاکتور برگشت از فروش",
-                ReferenceId = 0,
-                Description = dto.StatusText,
-                Items =
-                {
-                    ///////سندافزودن به موجودی 
-                   
-                    ///افزودن به موجودی کالا
-                    new VoucherItem{
-                        //AccountId=24,
-
-                        ///sndb2
-                        AccountId=AccountSnDb.MojodiKala,
-                        ToAccountId=(int)user.AccountId,
-                        Debit=(double)dto.FanalTotalAmount,
-                        Credit=0
-                    },
-
-                            ////بستانکار کردن تامین کننده
-                    new VoucherItem
-                    {
-                        //ToAccountId=24,
-
-                        ///sndb2
-                        AccountId=(int)user.AccountId,
-                        ToAccountId=AccountSnDb.MojodiKala,
-                        Debit=0,
-                        Credit=(double)dto.FanalTotalAmount
-                    },
-
-                }
-            };
-            foreach (var item in newVoucher.Items)
-            {
-                var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-                currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
-                item.MandehHesab = currentAccount.MandehHesab;
-
-            }
-
-            ////جنریت کردن کد فاکتور
-            int nextFactorNum = await _db.CyOrder
-           .Select(f => (int?)f.FactorNumber)
-           .MaxAsync() ?? 0;
-            nextFactorNum += 1;
-            order.FactorNumber = nextFactorNum;
-            order.OrderMode = ordermode;
-
-            await _db.CyOrderItem.AddRangeAsync(orderItems);
-            await _db.CyOrder.AddAsync(order);
-
-            newVoucher.ReferenceId = order.FactorNumber;
-
-            await _db.AddRangeAsync(newVoucher.Items);
-            await _db.Voucher.AddAsync(newVoucher);
+        //    ///اضافه کردن به موجودی کالا 
+        //    foreach (var item in dto.OrderItems)
+        //    {
+        //        var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
+        //        if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
 
 
-            await _db.SaveChangesAsync();
+        //        var currentProduct = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
 
-            return Ok(new { order = order, factoNumber = nextFactorNum });
-        }
+        //        if (currentProduct == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
+
+        //        double baePrice = item.UnitPrice;
+
+        //        currentProduct.Supply += item.Quantity;
+        //        currentProduct.ShopPrice = item.UnitPrice;
+
+        //        currentProduct.Price = baePrice + (baePrice * 40 / 100);   ///15-2   20-3 30-4   40-1  
+        //        currentProduct.NoOffPrice = baePrice + (baePrice * 40 / 100);
+        //        currentProduct.Price2 = baePrice + (baePrice * 15 / 100);   ///15-2   20-3 30-4   40-1    
+        //        currentProduct.Price3 = baePrice + (baePrice * 20 / 100);   ///15-2   20-3 30-4   40-1    
+        //        currentProduct.Price4 = baePrice + (baePrice * 30 / 100);   ///15-2   20-3 30-4   40-1    
+
+        //    }
+
+
+        //    /////ثبت سند حسابداری
+        //    Voucher newVoucher = new Voucher()
+        //    {
+        //        VoucherDate = DateTime.Now,
+        //        ReferenceType = ordermode == Ordermode.ShopFromCustomer ? "فاکتور خرید" : "فاکتور برگشت از فروش",
+        //        ReferenceId = 0,
+        //        Description = dto.StatusText,
+        //        Items =
+        //        {
+        //            ///////سندافزودن به موجودی 
+
+        //            ///افزودن به موجودی کالا
+        //            new VoucherItem{
+        //                //AccountId=24,
+
+        //                ///sndb2
+        //                AccountId=AccountSnDb.MojodiKala,
+        //                ToAccountId=(int)user.AccountId,
+        //                Debit=(double)dto.FanalTotalAmount,
+        //                Credit=0
+        //            },
+
+        //                    ////بستانکار کردن تامین کننده
+        //            new VoucherItem
+        //            {
+        //                //ToAccountId=24,
+
+        //                ///sndb2
+        //                AccountId=(int)user.AccountId,
+        //                ToAccountId=AccountSnDb.MojodiKala,
+        //                Debit=0,
+        //                Credit=(double)dto.FanalTotalAmount
+        //            },
+
+        //        }
+        //    };
+        //    foreach (var item in newVoucher.Items)
+        //    {
+        //        var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
+        //        currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
+        //        item.MandehHesab = currentAccount.MandehHesab;
+
+        //    }
+
+        //    ////جنریت کردن کد فاکتور
+        //    int nextFactorNum = await _db.CyOrder
+        //   .Select(f => (int?)f.FactorNumber)
+        //   .MaxAsync() ?? 0;
+        //    nextFactorNum += 1;
+        //    order.FactorNumber = nextFactorNum;
+        //    order.OrderMode = ordermode;
+
+        //    await _db.CyOrder.AddAsync(order);
+
+        //    newVoucher.ReferenceId = order.FactorNumber;
+
+        //    await _db.AddRangeAsync(newVoucher.Items);
+        //    await _db.Voucher.AddAsync(newVoucher);
+
+
+        //    await _db.SaveChangesAsync();
+
+        //    return Ok(new { order = order, factoNumber = nextFactorNum });
+        //}
 
         [HttpPut("editOrderB")]
         public async Task<ActionResult> editOrderB([FromBody] OrderDTO dto)

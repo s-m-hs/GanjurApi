@@ -38,7 +38,7 @@ namespace CY_WebApi.Models
         public DbSet<CY_DM.CyInspectionForm> CyInspectionForm { get; set; } = default !;
         public DbSet<CY_DM.CyPcbForm> CyPcbForm { get; set; } = default!;
         public DbSet<CY_DM.CyProductCategory> CyProductCategory { get; set; } = default!;
-        public DbSet<CY_DM.CyGuarantee> CyGuarantee { get; set; } = default!;
+        public DbSet<CY_DM.CyService> CyService { get; set; } = default!;
         public DbSet<CY_DM.CySub_Cat> CySub_Cats { get; set; } = default!;
 
         public DbSet<CY_DM.CyCoupon> CyCoupon { get; set; } = default!;
@@ -62,9 +62,7 @@ namespace CY_WebApi.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<CyGuarantee>()
-                .HasIndex(g => g.GuaranteeID)
-                .IsUnique();
+
 
 
         }

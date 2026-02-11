@@ -29,7 +29,7 @@ namespace CY_WebApi
             CreateMap<CyInspectionItem, InspectionItemDTO>().ReverseMap();
             CreateMap<CyProductCategory, ProductCategoryDTO>().ReverseMap();
             CreateMap<CyPcbForm, pcbDTO>().ReverseMap();
-            CreateMap<CyGuarantee, GuaranteeDTO>().ReverseMap();
+            CreateMap<CyService, ServiceDTO>().ReverseMap();
             CreateMap<CouponDTO, CyCoupon>().ReverseMap();
             CreateMap<CouponUsageDTO, CyCouponUsage>().ReverseMap();
             CreateMap<TaskDTO, CyTask>().ReverseMap();

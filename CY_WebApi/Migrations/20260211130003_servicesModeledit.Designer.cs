@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CY_WebApi.Migrations
 {
     [DbContext(typeof(CyContext))]
-    [Migration("20260122212136_Isedited")]
-    partial class Isedited
+    [Migration("20260211130003_servicesModeledit")]
+    partial class servicesModeledit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -280,66 +280,6 @@ namespace CY_WebApi.Migrations
                     b.HasIndex("SenderID");
 
                     b.ToTable("CyFile");
-                });
-
-            modelBuilder.Entity("CY_DM.CyGuarantee", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<string>("CompanyExplaination")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreateDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CyUserID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Details")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GuaranteeCompany")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("GuaranteeID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("GuarantreePrice")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsVisible")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastModified")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ProductName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProductProblem")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProductStatus")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RecievedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("CyUserID");
-
-                    b.HasIndex("GuaranteeID")
-                        .IsUnique();
-
-                    b.ToTable("CyGuarantee");
                 });
 
             modelBuilder.Entity("CY_DM.CyInspectionForm", b =>
@@ -1196,6 +1136,64 @@ namespace CY_WebApi.Migrations
                     b.ToTable("CyProfile");
                 });
 
+            modelBuilder.Entity("CY_DM.CyService", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("AcceDevices")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CustomerName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeliveryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVisible")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Mobile")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductBrand")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductModel")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductProblem")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductProblemB")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProductType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ServiceDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ServicePrice")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.ToTable("CyService");
+                });
+
             modelBuilder.Entity("CY_DM.CySkin", b =>
                 {
                     b.Property<int>("ID")
@@ -1514,7 +1512,9 @@ namespace CY_WebApi.Migrations
 
                     b.HasKey("ID");
 
-                    b.HasIndex("AccountId");
+                    b.HasIndex("AccountId")
+                        .IsUnique()
+                        .HasFilter("[AccountId] IS NOT NULL");
 
                     b.ToTable("CyUser");
                 });
@@ -1764,15 +1764,6 @@ namespace CY_WebApi.Migrations
                     b.Navigation("Sender");
                 });
 
-            modelBuilder.Entity("CY_DM.CyGuarantee", b =>
-                {
-                    b.HasOne("CY_DM.CyUser", "CyUser")
-                        .WithMany()
-                        .HasForeignKey("CyUserID");
-
-                    b.Navigation("CyUser");
-                });
-
             modelBuilder.Entity("CY_DM.CyInspectionForm", b =>
                 {
                     b.HasOne("CY_DM.CyAddress", "CyAddress")
@@ -2003,8 +1994,8 @@ namespace CY_WebApi.Migrations
             modelBuilder.Entity("CY_DM.CyUser", b =>
                 {
                     b.HasOne("CY_DM.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId");
+                        .WithOne("CyUser")
+                        .HasForeignKey("CY_DM.CyUser", "AccountId");
 
                     b.Navigation("Account");
                 });
@@ -2054,6 +2045,8 @@ namespace CY_WebApi.Migrations
             modelBuilder.Entity("CY_DM.Account", b =>
                 {
                     b.Navigation("Children");
+
+                    b.Navigation("CyUser");
 
                     b.Navigation("Voucher");
                 });

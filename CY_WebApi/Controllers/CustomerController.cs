@@ -43,6 +43,7 @@ namespace CY_WebApi.Controllers
 
             var newUser = _mapper.Map<CyUser>(dto);
 
+            dto.userType=UserType.Customer;
             // آخرین کد اشخاص
             var lastCode = _db.Account
                 .Where(a => a.Code.StartsWith("80000"))

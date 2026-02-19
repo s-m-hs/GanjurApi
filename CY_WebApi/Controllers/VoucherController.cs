@@ -225,5 +225,66 @@ namespace CY_WebApi.Controllers
         }
 
 
+        /// <summary>
+        /// گزارش عملکرد مالی
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="to"></param>
+        /// <returns></returns>
+        [HttpGet("financial-performance")]
+        public async Task<IActionResult> GetFinancialPerformance(
+    DateTime from,
+    DateTime to)
+        {
+            var query = _db.VoucherItem
+                .Where(x => x.Voucher != null &&
+                            x.Voucher.VoucherDate >= from &&
+                            x.Voucher.VoucherDate <= to);
+
+            // فروش ناخالص (فقط فروش کالا - Id = 15)
+            var grossSales = await query
+                .Where(x => x.AccountId == 15)
+                .SumAsync(x => x.Credit - x.Debit);
+
+            // فروش خالص (کل درآمدها AccountType = 4)
+            var netSales = await query
+                .Where(x => x.Account != null &&
+                            x.Account.AccountType == AccountType.Revenue)
+                .SumAsync(x => x.Credit - x.Debit);
+
+            // بهای تمام شده (Id = 14)
+            var cogs = await query
+                .Where(x => x.AccountId == 14)
+                .SumAsync(x => x.Debit - x.Credit);
+
+            // سایر هزینه ها (AccountType = 5 به جز 14)
+            var otherExpenses = await query
+                .Where(x => x.Account != null &&
+                            x.Account.AccountType == AccountType.Expense &&
+                            x.AccountId != 14)
+                .SumAsync(x => x.Debit - x.Credit);
+
+            var result = new FinancialPerformanceDto
+            {
+                GrossSales = grossSales,
+                NetSales = netSales,
+                Cogs = cogs,
+                OtherExpenses = otherExpenses,
+                NetProfit = netSales - cogs - otherExpenses
+            };
+
+            return Ok(result);
+        }
+
+        public class FinancialPerformanceDto
+        {
+            public double GrossSales { get; set; }
+            public double NetSales { get; set; }
+            public double Cogs { get; set; }
+            public double OtherExpenses { get; set; }
+            public double NetProfit { get; set; }
+        }
+
+
     }
 }

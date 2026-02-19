@@ -66,6 +66,8 @@ namespace CY_WebApi.Controllers
                     .Where(x => x.IsVisible && productIds.Contains(x.ID))
                     .ToListAsync();
 
+                if (!products.Any()) return BadRequest(new { msg = "products not found" });
+
                 double shopPrice = 0;
 
                 foreach (var item in dto.OrderItems)
@@ -106,7 +108,7 @@ namespace CY_WebApi.Controllers
                 order.OrderItems = _mapper
                     .Map<List<CyOrderItem>>(dto.OrderItems);
 
-                await _db.CyOrder.AddAsync(order);
+                //await _db.CyOrder.AddAsync(order);   ////به انتهای اکشن انتفال داده شد
                 #endregion
 
                 #region Voucher
@@ -158,13 +160,14 @@ namespace CY_WebApi.Controllers
                 {
                     var account = await _db.Account
                         .FirstAsync(x => x.IsVisible && x.ID == item.AccountId);
+                    if (account == null) return BadRequest(new { msg = "acoount not found" });
 
                     account.MandehHesab =
                         account.MandehHesab + item.Debit - item.Credit;
 
                     item.MandehHesab = account.MandehHesab;
                 }
-
+                await _db.CyOrder.AddAsync(order);
                 await _db.Voucher.AddAsync(voucher);
                 #endregion
 

@@ -8,7 +8,7 @@
         Equity = 3,      // سرمایه
         Revenue = 4,     // درآمد
         Expense = 5,      // هزینه
-             Person = 6 //اشخاص
+             Person = 8 //اشخاص
     }
     public enum TicketStatus
     {

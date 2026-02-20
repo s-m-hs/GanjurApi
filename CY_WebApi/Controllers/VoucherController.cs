@@ -237,15 +237,17 @@ namespace CY_WebApi.Controllers
     DateTime to)
         {
             var query = _db.VoucherItem
-                .Where(x => x.Voucher != null &&
+                .Where(x => x.IsVisible &&  x.Voucher != null &&
                             x.Voucher.VoucherDate >= from &&
                             x.Voucher.VoucherDate <= to);
 
             // فروش ناخالص (فقط فروش کالا - Id = 15)
-            var grossSales = await query
+            var DarAmad = await query
                 .Where(x => x.AccountId == 15)
                 .SumAsync(x => x.Credit - x.Debit);
 
+       
+            
             // فروش خالص (کل درآمدها AccountType = 4)
             var netSales = await query
                 .Where(x => x.Account != null &&
@@ -253,7 +255,7 @@ namespace CY_WebApi.Controllers
                 .SumAsync(x => x.Credit - x.Debit);
 
             // بهای تمام شده (Id = 14)
-            var cogs = await query
+            var BahayKala = await query
                 .Where(x => x.AccountId == 14)
                 .SumAsync(x => x.Debit - x.Credit);
 
@@ -266,11 +268,11 @@ namespace CY_WebApi.Controllers
 
             var result = new FinancialPerformanceDto
             {
-                GrossSales = grossSales,
+                DarAmad = DarAmad,
                 NetSales = netSales,
-                Cogs = cogs,
+                BahayKala = BahayKala,
                 OtherExpenses = otherExpenses,
-                NetProfit = netSales - cogs - otherExpenses
+                NetProfit = netSales - BahayKala - otherExpenses
             };
 
             return Ok(result);
@@ -278,9 +280,9 @@ namespace CY_WebApi.Controllers
 
         public class FinancialPerformanceDto
         {
-            public double GrossSales { get; set; }
+            public double DarAmad { get; set; }
             public double NetSales { get; set; }
-            public double Cogs { get; set; }
+            public double BahayKala { get; set; }
             public double OtherExpenses { get; set; }
             public double NetProfit { get; set; }
         }

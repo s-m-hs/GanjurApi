@@ -25,10 +25,10 @@ namespace CY_WebApi.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(DateTime fromDate,DateTime toDate)
+        public async Task<IActionResult> GetAll(DateTime fromDate, DateTime toDate)
         {
-            var vouchers = await _db.Voucher.Where(x=>x.IsVisible && x.VoucherDate >= fromDate && x.VoucherDate <= toDate )
-                .Include(v => v.Items).ThenInclude(i=>i.Account)
+            var vouchers = await _db.Voucher.Where(x => x.IsVisible && x.VoucherDate >= fromDate && x.VoucherDate <= toDate)
+                .Include(v => v.Items).ThenInclude(i => i.Account)
                 .OrderByDescending(v => v.VoucherDate)
                 .ToListAsync();
 
@@ -49,7 +49,7 @@ namespace CY_WebApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var voucher = await _db.Voucher.Where(x=>x.IsVisible)
+            var voucher = await _db.Voucher.Where(x => x.IsVisible)
                 .Include(v => v.Items)
                 .FirstOrDefaultAsync(v => v.ID == id);
 
@@ -177,32 +177,32 @@ namespace CY_WebApi.Controllers
             foreach (var item in dto.Items)
             {
                 var balance = await _db.VoucherItem
-               .Where(v => v.AccountId == item.AccountId ).Include(i=>i.Voucher).Where(x=>x.Voucher.VoucherDate < dto.VoucherDate)
+               .Where(v => v.AccountId == item.AccountId).Include(i => i.Voucher).Where(x => x.Voucher.VoucherDate < dto.VoucherDate)
                .SumAsync(v => v.Debit - v.Credit);
                 var voucherItem = await _db.VoucherItem.Where(x => x.IsVisible && x.ID == item.ID).Include(i => i.Account).FirstOrDefaultAsync();
-         
-                if (voucherItem == null || voucherItem.Account==null) return BadRequest("voucherItem not Found");
+
+                if (voucherItem == null || voucherItem.Account == null) return BadRequest("voucherItem not Found");
                 voucherItem.AccountId = item.AccountId;
                 voucherItem.ToAccountId = item.ToAccountId;
-                voucherItem.Credit=item.Credit;
-                voucherItem.Debit=item.Debit;
+                voucherItem.Credit = item.Credit;
+                voucherItem.Debit = item.Debit;
                 voucherItem.IsEdited = true;
                 voucherItem.MandehHesab = balance + item.Debit - item.Credit;
                 voucherItem.Account.MandehHesab = voucherItem.Account.MandehHesab + item.Debit - item.Credit;
-        
+
             }
 
             await _db.SaveChangesAsync();
 
 
-            return Ok(new {msg="ویرایش انجام شد"});
+            return Ok(new { msg = "ویرایش انجام شد" });
         }
 
 
         [HttpDelete("deleteVoucher")]
         public async Task<ActionResult> deleteVoucher(int id)
         {
-            var currentVoucher = await _db.Voucher.Where(x => x.IsVisible && x.ID == id).Include(i=>i.Items).FirstOrDefaultAsync();
+            var currentVoucher = await _db.Voucher.Where(x => x.IsVisible && x.ID == id).Include(i => i.Items).FirstOrDefaultAsync();
             if (currentVoucher == null) return BadRequest(new { msg = "سند یافت نشد" });
 
 
@@ -211,13 +211,13 @@ namespace CY_WebApi.Controllers
 
             foreach (var item in oldItems)
             {
-                var currentVoucherItem=await _db.VoucherItem.Where(x=>x.IsVisible && x.ID== item.ID).Include(i=>i.Account).FirstOrDefaultAsync();
+                var currentVoucherItem = await _db.VoucherItem.Where(x => x.IsVisible && x.ID == item.ID).Include(i => i.Account).FirstOrDefaultAsync();
                 currentVoucherItem.Account.MandehHesab = currentVoucherItem.Account.MandehHesab - item.Debit + item.Credit;
                 item.IsEdited = true;
                 item.IsVisible = false;
             }
 
-            currentVoucher.IsVisible=false;
+            currentVoucher.IsVisible = false;
             await _db.SaveChangesAsync();
 
 
@@ -237,7 +237,7 @@ namespace CY_WebApi.Controllers
     DateTime to)
         {
             var query = _db.VoucherItem
-                .Where(x => x.IsVisible &&  x.Voucher != null &&
+                .Where(x => x.IsVisible && x.Voucher != null &&
                             x.Voucher.VoucherDate >= from &&
                             x.Voucher.VoucherDate <= to);
 
@@ -246,8 +246,8 @@ namespace CY_WebApi.Controllers
                 .Where(x => x.AccountId == 15)
                 .SumAsync(x => x.Credit - x.Debit);
 
-       
-            
+
+
             // فروش خالص (کل درآمدها AccountType = 4)
             var netSales = await query
                 .Where(x => x.Account != null &&
@@ -287,6 +287,106 @@ namespace CY_WebApi.Controllers
             public double NetProfit { get; set; }
         }
 
+
+
+        [HttpGet("expense-summary")]
+        public async Task<IActionResult> GetExpenseSummary(
+    DateTime from,
+    DateTime to)
+        {
+            var expenses = await _db.VoucherItem
+                .Where(v =>
+                    v.Voucher != null &&
+                    v.Voucher.VoucherDate >= from &&
+                    v.Voucher.VoucherDate <= to &&
+                    v.Account != null &&
+                    v.AccountId != 14 &&
+                    v.Account.AccountType == AccountType.Expense)
+                .GroupBy(v => new
+                {
+                    v.AccountId,
+                    v.Account.Title
+                })
+                .Select(g => new ExpenseSummaryDto
+                {
+                    AccountId = g.Key.AccountId!.Value,
+                    Title = g.Key.Title,
+                    Amount = g.Sum(x => x.Debit - x.Credit)
+                })
+                .Where(x => x.Amount != 0)
+                .OrderByDescending(x => x.Amount)
+                .ToListAsync();
+
+            return Ok(expenses);
+        }
+        public class ExpenseSummaryDto
+        {
+            public int AccountId { get; set; }
+            public string Title { get; set; } = null!;
+            public double Amount { get; set; }
+        }
+
+
+
+
+
+        //   [HttpGet("getVou")]
+        //   async public Task<ActionResult> getVou()
+        //   {
+        //       var Voucher = await _db.Voucher.Where(x => x.IsVisible && x.ReferenceId !=null).Include(i => i.Items).ToListAsync();
+
+        //       var allOrder = await _db.CyOrder.Where(x => x.IsVisible).Include(i => i.OrderItems).ToListAsync();
+        //       var listId = allOrder.Select(s => s.FactorNumber).ToList();
+
+        //       var allOrderItems = await _db.CyOrderItem.Where(x => x.IsVisible).ToListAsync();
+        //       var listIdB = allOrderItems.Select(s => s.ProductID).ToList();
+
+        //       var products = await _db.CyProduct
+        //.Where(x => x.IsVisible && listIdB.Contains(x.ID))
+        //.ToListAsync();
+
+
+        //       foreach (var item in Voucher)
+        //       {
+        //           double shopPrice = 0;
+
+        //           var curentOrdre = allOrder.Where(x => x.FactorNumber == item.ReferenceId).First();
+
+        //           foreach (var item1 in curentOrdre.OrderItems)
+        //           {
+        //               var product = products.FirstOrDefault(x => x.ID == item1.ProductID);
+
+        //               if (product == null)
+        //                   return BadRequest(new
+        //                   {
+        //                       msg = "محصول در انبار موجود نیست",
+        //                   });
+        //               shopPrice += (product.ShopPrice ?? 0) * item1.Quantity;
+
+        //           }
+        //           foreach (var item2 in item.Items)
+        //           {
+        //               if (item2.AccountId == AccountSnDb.MojodiKala)
+        //               {
+        //                   item2.Debit = 0;
+        //                   item2.Credit = shopPrice;
+        //                   item2.IsEdited= true;
+        //               }
+        //               else if (item2.AccountId == AccountSnDb.BahayKala)
+        //               {
+        //                   item2.Debit = shopPrice;
+        //                   item2.Credit = 0;
+        //                   item2.IsEdited = true;
+        //               }
+        //           }
+
+        //       }
+        //       await _db.SaveChangesAsync();
+
+        //       return Ok(Voucher);
+
+
+        //   }
 
     }
 }

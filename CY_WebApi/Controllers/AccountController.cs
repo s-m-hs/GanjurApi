@@ -6,6 +6,7 @@ using CY_WebApi.Models;
 using Google.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 using Microsoft.OpenApi.Models;
 namespace CY_WebApi.Controllers
 {
@@ -338,6 +339,59 @@ namespace CY_WebApi.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// محاسبه مانده حساب برای ایدی هایی که مانده صفر دارند
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("mandeHesabC")]
+        async public Task<ActionResult> mandeHesabC()
+        {
+            var AllAccounts = await _db.Account.Where(x => x.IsVisible && x.MandehHesab==0).ToListAsync();
+
+            foreach (var item in AllAccounts)
+            {
+
+                var balance = await _db.VoucherItem
+    .Where(v => v.IsVisible && v.AccountId == item.ID)
+    .SumAsync(v => v.Debit - v.Credit);
+
+                item.MandehHesab = balance;
+            }
+            await _db.SaveChangesAsync();
+
+            return Ok();
+        }
+
+
+
+        [HttpGet("mizan")]
+        async public Task<ActionResult> mizan()
+        {
+            var factors = await _db.CyOrder.Where(x => x.IsVisible && x.OrderMode == Ordermode.ShopFromCustomer).Select(s=>s.FactorNumber).ToListAsync();
+            var vouchers =await _db.Voucher.Where(x => factors.Contains((int)x.ReferenceId)).Include(i=>i.Items).Select(s=>s.Items).ToListAsync();
+
+            int count = 0;
+
+            foreach (var item in vouchers)
+            {
+                foreach (var item2 in item)
+                {
+                    if(item2.AccountId==24 && item2.Debit == 0 && item2.Credit!=0)
+                    {
+                        item2.Debit = item2.Credit;
+                        item2.Credit = 0;
+                        count = count+1;
+                        item2.IsEdited=true;
+                    }
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+
+            return Ok(new {count=vouchers.Count,count2=count, vouchers=vouchers });
+
+        }
 
 
         //[HttpGet("getMoeinHesab")]

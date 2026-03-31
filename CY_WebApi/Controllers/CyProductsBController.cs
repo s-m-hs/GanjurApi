@@ -2,6 +2,7 @@
 using CY_WebApi.Migrations;
 using CY_WebApi.Models;
 using CY_WebApi.Services;
+using DocumentFormat.OpenXml.InkML;
 using ExcelDataReader;
 using Google.Rpc;
 using Microsoft.AspNetCore.Mvc;
@@ -145,6 +146,44 @@ namespace CY_WebApi.Controllers
 
             return Ok(allProducts);
         }
+
+
+
+        [HttpGet("KartexProduct")]
+        async public Task<ActionResult> KartexProduct(int id)
+        {
+            var orderItems=await _db.CyOrderItem.Where(x=>x.IsVisible && x.ProductID == id).Include(i => i.Product).Include(i => i.CyOrder).ThenInclude(i=>i.CyUser).Select(s => new
+            {
+                name=s.Product.Name,
+                Quantity=s.Quantity,
+                UnitPrice=s.UnitPrice,
+                TotalPrice=s.TotalPrice,
+                user = s.CyOrder.CyUser.CyUsNm,
+                FactorNumber = s.CyOrder.FactorNumber,
+                creatDate =s.CreateDate
+
+
+            }).ToListAsync();
+
+
+            return Ok(orderItems);
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         //[HttpGet("getAllProToExell")]
         //public async Task<ActionResult> getAllProToExell()

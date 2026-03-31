@@ -148,6 +148,7 @@ namespace CY_WebApi.Controllers
                 Title = dto.CyUsNm,
                 ParentId = 8,
                 IsActive = true,
+                MandehHesab=0
             };
 
             await _db.Account.AddAsync(newAccount);
@@ -190,20 +191,16 @@ namespace CY_WebApi.Controllers
 
 
 
-
-            var AllAccounts = await _db.Account.Where(x => x.IsVisible ).ToListAsync();
-
-
             ////در این قسمت 
             ////isvisible 
             ////قرار نمیدهیم به خاطر اسنادی که حذف شده اند 
-            var currentVouchurs =  _db.VoucherItem.Where(x => x.AccountId == AccountId).Include(u => u.Voucher).Include(i => i.Account).OrderBy(o => o.ID).AsQueryable();
+            var currentVouchurs = await _db.VoucherItem.Where(x => x.AccountId == AccountId).Include(u => u.Voucher).Include(i => i.Account).OrderBy(o => o.ID).ToListAsync();
 
             var isEditedVoItem = currentVouchurs.Where(x => x.IsEdited == true).FirstOrDefault();
 
             if(isEditedVoItem != null )
             {
-                var avalbleItems =await currentVouchurs.Where(x => x.IsVisible).ToArrayAsync();
+                var avalbleItems = currentVouchurs.Where(x => x.IsVisible).ToList();
 
                 foreach (var item1 in currentVouchurs)
                 {
@@ -224,7 +221,7 @@ namespace CY_WebApi.Controllers
             await _db.SaveChangesAsync();
 
 
-        var resultB= await currentVouchurs?.Where(x=>x.IsVisible).Select(x => new
+        var resultB=  currentVouchurs?.Where(x=>x.IsVisible).Select(x => new
                         {
                             Id = x.ID,
                             Debit = x.Debit,
@@ -238,7 +235,7 @@ namespace CY_WebApi.Controllers
                             creatDate=x.CreateDate
 
                         }).OrderByDescending(o=>o.creatDate)
-                        .ToListAsync();
+                        .ToList();
 
             return Ok(new { currentVouchurs = resultB, result = result });
         }

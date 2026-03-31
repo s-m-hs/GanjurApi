@@ -50,10 +50,10 @@ namespace CY_WebApi.Controllers
             try
             {
                 #region User
-                var user = await _db.CyUser
+                var user = await _db.CyUser.Where(x =>
+                        x.IsVisible && x.ID == dto.CyUserID)
                     .Include(x => x.Account)
-                    .FirstOrDefaultAsync(x =>
-                        x.IsVisible && x.ID == dto.CyUserID);
+                    .FirstOrDefaultAsync();
 
                 if (user == null)
                     return BadRequest(new { msg = "کاربر یافت نشد" });
@@ -126,6 +126,7 @@ namespace CY_WebApi.Controllers
                 new VoucherItem
                 {
                     AccountId = AccountSnDb.MojodiKala,
+                 ToAccountId=AccountSnDb.BahayKala,
                     Debit = 0,
                     Credit = shopPrice
                 },
@@ -134,6 +135,7 @@ namespace CY_WebApi.Controllers
                 new VoucherItem
                 {
                     AccountId = AccountSnDb.BahayKala,
+                     ToAccountId = AccountSnDb.MojodiKala,
                     Debit = shopPrice,
                     Credit = 0
                 },
@@ -141,7 +143,8 @@ namespace CY_WebApi.Controllers
                 // بدهکار کردن مشتری
                 new VoucherItem
                 {
-                    AccountId = user.AccountId.Value,
+                    AccountId = user.AccountId,
+                    ToAccountId=AccountSnDb.DarAmad,
                     Debit = (double)dto.FanalTotalAmount,
                     Credit = 0
                 },
@@ -150,6 +153,7 @@ namespace CY_WebApi.Controllers
                 new VoucherItem
                 {
                     AccountId = AccountSnDb.DarAmad,
+                    ToAccountId=user.AccountId,
                     Debit = 0,
                     Credit = (double)dto.FanalTotalAmount
                 }
@@ -347,6 +351,7 @@ namespace CY_WebApi.Controllers
             /// افزودن به موجودی کالا 
             foreach (var item in currentOrder.OrderItems)
             {
+                item.IsVisible = false;
                 var currentProductAvalable = allProducS.Where(x => x.IsVisible && x.ID == item.ProductID).FirstOrDefault();
                 if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار مو`جود نیست", product = item.PartNumber });
 
@@ -737,6 +742,8 @@ namespace CY_WebApi.Controllers
                 var currentProductAvalable = allProducS.Where(x => x.ID == item.ProductID).FirstOrDefault();
                 if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار مو`جود نیست", product = item.PartNumber });
 
+                item.IsVisible = false;
+
                 if (currentOrder.OrderMode == Ordermode.ShopFromCustomer || currentOrder.OrderMode == Ordermode.BackSaleToCustomer)
                 {
 
@@ -967,16 +974,14 @@ namespace CY_WebApi.Controllers
         {
             var orders = await _db.CyOrder.AsNoTracking().
                 Where(x => x.IsVisible).
-                Include(i => i.CyUser)
-                //.Select(s => new
-                //{
-                //    id = s.ID,
-                //    date = s.CreateDate,
-                //    factorNumber = s.FactorNumber,
-                //    fanalTotalAmount = s.FanalTotalAmount,
-                //    user = s.CyUser.CyUsNm
-                //})
-                .ToListAsync();
+                Include(i => i.CyUser).Select(s => new
+                {
+                    id = s.ID,
+                    date = s.CreateDate,
+                    factorNumber = s.FactorNumber,
+                    fanalTotalAmount = s.FanalTotalAmount,
+                    user = s.CyUser.CyUsNm
+                }).ToListAsync();
 
             orders.Reverse();
 

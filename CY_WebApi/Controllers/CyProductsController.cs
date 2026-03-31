@@ -54,6 +54,41 @@ namespace CY_WebApi.Controllers
             return Ok(pagedres);
         }
 
+        [HttpGet("allProducsB")]
+        async public Task<ActionResult> allProducsB()
+        {
+            var allProducts = await _db.CyProduct.AsNoTracking().Where(x => x.IsVisible).Include(i => i.CyManufacturer).Include(i => i.CyProductCategory).Select(s => new
+            {
+                name = s.Name,
+                id = s.ID,
+                Description = s.Description,
+                ShopPrice = s.ShopPrice,
+                Price=s.Price,
+                Price2=s.Price2,
+                Price3=s.Price3,
+                Price4=s.Price4,
+                Price5=s.Price5,
+                NoOffPrice=s.NoOffPrice,
+                PartNo=s.PartNo,
+                MfrNo=s.MfrNo,
+                ProductCode=s.ProductCode,
+                DatasheetUrl=s.DatasheetUrl,
+                Supply=s.Supply,
+                CyCategoryId=s.CyCategoryId,
+                CyProductCategoryId=s.CyProductCategoryId,
+                CyManufacturerId=s.CyManufacturerId,
+                status=s.status,
+                manufacName=s.CyManufacturer.Name,
+                proCateName=s.CyProductCategory.Name
+
+            }).OrderByDescending(o=>o.id
+            
+            
+            ).ToListAsync();
+        
+            return Ok(allProducts);
+        }
+
         // GET: api/CyProducts/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductDTO>> GetCyProduct(int id)
@@ -639,7 +674,10 @@ namespace CY_WebApi.Controllers
             return Ok(breadCrumList);
         }
       
-        
+        /// <summary>
+        /// لیست کالاهای موجود
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("getExellFromProduct")]    
         public async Task<IActionResult> getExellFromProduct()
     {
@@ -647,7 +685,7 @@ namespace CY_WebApi.Controllers
             .Where(x => x.IsVisible
                 && x.CyProductCategoryId != null
                 && x.CyCategoryId != null
-                && x.Supply>0
+                && x.Supply > 0
                 )
             .Select(s => new
             {
@@ -700,6 +738,71 @@ namespace CY_WebApi.Controllers
             "Products.xlsx"
         );
     }
+
+
+        /// <summary>
+        /// لیست همه کالاها
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("getExellFromAllProduct")]
+        public async Task<IActionResult> getExellFromAllProduct()
+        {
+            var products = await _db.CyProduct
+                .Where(x => x.IsVisible
+                    && x.CyProductCategoryId != null
+                    && x.CyCategoryId != null
+                    )
+                .Select(s => new
+                {
+                    s.ID,
+                    s.Name,
+                    s.Supply,
+                    s.Price,
+                    s.CyManufacturerId,
+                    s.CyProductCategoryId,
+                    s.CyCategoryId,
+                })
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Products");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "ID";
+            worksheet.Cell(1, 2).Value = "name";
+            worksheet.Cell(1, 3).Value = "supply ";
+            worksheet.Cell(1, 4).Value = " price";
+            worksheet.Cell(1, 5).Value = "manufacturId ";
+            worksheet.Cell(1, 6).Value = " proCategoryId";
+            worksheet.Cell(1, 7).Value = "categoryId";
+
+            // Data
+            int row = 2;
+            foreach (var item in products)
+            {
+                worksheet.Cell(row, 1).Value = item.ID;
+                worksheet.Cell(row, 2).Value = item.Name;
+                worksheet.Cell(row, 3).Value = item.Supply;
+                worksheet.Cell(row, 4).Value = item.Price;
+                worksheet.Cell(row, 5).Value = item.CyManufacturerId;
+                worksheet.Cell(row, 6).Value = item.CyProductCategoryId;
+                worksheet.Cell(row, 7).Value = item.CyCategoryId;
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Products.xlsx"
+            );
+        }
 
         [HttpGet("getExellFromManufcture")]
         public async Task<IActionResult> getExellFromManufcture()

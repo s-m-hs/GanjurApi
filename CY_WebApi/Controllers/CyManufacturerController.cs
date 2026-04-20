@@ -20,10 +20,12 @@ namespace CY_WebApi.Controllers
     {
         private readonly IMapper _mapper;
         private readonly Repository<CyManufacturer> _repo;
-        public CyManufacturerController(CyContext context, IMapper mapper)
+        private readonly CyContext _db;
+        public CyManufacturerController(CyContext context, IMapper mapper,CyContext db)
         {
             _mapper = mapper;
             _repo = new Repository<CyManufacturer>(context);
+            _db = db;
         }
 
         // GET: api/CyManufacturers
@@ -125,5 +127,24 @@ namespace CY_WebApi.Controllers
             var res = _mapper.Map<List<ManufacturerDTO>>(manufacturerList);
             return Ok(res);
         }
+
+
+        [HttpGet("getAllManufcture")]
+        async public Task<ActionResult> getAllManufcture()
+        {
+            var allManufacture=await _db.CyManufacturer.AsNoTracking().Where(x => x.IsVisible).Select(s => new
+            {
+                name=s.Name,
+                id=s.ID,
+                code=s.Code,
+            }).OrderBy(o => o.name).ToListAsync();
+
+
+            return Ok(allManufacture);
+
+
+        }
+
+
     }
 }

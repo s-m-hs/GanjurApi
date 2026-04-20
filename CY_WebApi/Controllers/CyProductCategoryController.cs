@@ -259,5 +259,20 @@ namespace CY_WebApi.Controllers
             var res = _mapper.Map<List<ProductCategoryDTO>>(ProductCategoryList);
             return Ok(res);
         }
+
+
+        [HttpGet("getAllProductCate")]
+        async public Task<ActionResult> getAllProductCate()
+        {
+            var allProCat = await _db.CyProductCategory.AsNoTracking().Where(x => x.IsVisible).Select(s => new
+            {
+                name = s.Name,
+                id = s.ID,
+                code = s.Code,
+            }).OrderBy(o=>o.name).ToListAsync();
+
+
+            return Ok(allProCat);
+        }
     }
 }

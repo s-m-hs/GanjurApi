@@ -1,4 +1,5 @@
-﻿using CY_DM;
+﻿using System.Security.Claims;
+using CY_DM;
 using CY_WebApi.Migrations;
 using CY_WebApi.Models;
 using CY_WebApi.Services;
@@ -167,6 +168,52 @@ namespace CY_WebApi.Controllers
 
 
             return Ok(orderItems);
+
+        }
+
+
+
+        [HttpGet("changePriceUp")]
+        async public Task<ActionResult> changePriceUp(int manufacture,int proCategory,double percent)
+        {
+            //var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            //if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
+
+            var product=await _db.CyProduct.Where(x=>x.IsVisible && x.Supply>0 && x.CyManufacturerId== manufacture && x.CyProductCategoryId== proCategory).ToListAsync();
+            if (product == null) return BadRequest();
+            foreach (var item in product) {
+                item.Price  = item.Price + (item.Price * percent / 100);
+                item.Price2 = item.Price2 + (item.Price2 * percent / 100);
+                item.Price3 = item.Price3 + (item.Price3 * percent / 100);
+                item.Price4 = item.Price4 + (item.Price4 * percent / 100);
+            }
+
+            _db.SaveChanges();
+
+            return Ok(new { msg = "ok" });
+        }
+
+        [HttpGet("changePriceDown")]
+        async public Task<ActionResult> changePriceDown(int manufacture, int proCategory, double percent)
+        {
+            var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
+
+            var product = await _db.CyProduct.Where(x => x.IsVisible && x.Supply > 0 && x.CyManufacturerId == manufacture && x.CyProductCategoryId == proCategory).ToListAsync();
+
+            if (product == null) return BadRequest();
+
+            foreach (var item in product)
+            {
+                item.Price  = item.Price - (item.Price * percent / 100);
+                item.Price2 = item.Price2 - (item.Price2 * percent / 100);
+                item.Price3 = item.Price3 - (item.Price3 * percent / 100);
+                item.Price4 = item.Price4 - (item.Price4 * percent / 100);
+            }
+
+            _db.SaveChanges();
+
+            return Ok(new {msg="ok"});
 
         }
 

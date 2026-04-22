@@ -113,7 +113,7 @@ namespace CY_WebApi.Controllers
                              .ToList()
                 })
                 .OrderByDescending(x => x.SumOfQuantities)
-                .Take(12)
+                .Take(18)
                 .ToList();
 
             var labels = groupedResult.Select(x => x.Category).ToArray();

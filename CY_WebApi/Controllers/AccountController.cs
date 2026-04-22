@@ -54,7 +54,7 @@ namespace CY_WebApi.Controllers
                 AccountType = dto.AccountType,
                 ParentId = dto.ParentId,
                 IsActive = true,
-                MandehHesab=0
+                MandehHesab = 0
             };
 
             _db.Account.Add(account);
@@ -124,7 +124,7 @@ namespace CY_WebApi.Controllers
 
             // 2. محاسبه مانده حساب
             var balance = await _db.VoucherItem
-                .Where(v =>v.IsVisible && v.AccountId == accountId)
+                .Where(v => v.IsVisible && v.AccountId == accountId)
                 .SumAsync(v => v.Debit - v.Credit);
 
             // 3. خروجی
@@ -169,7 +169,7 @@ namespace CY_WebApi.Controllers
 
             // 2. محاسبه مانده حساب
             var balance = await _db.VoucherItem
-                .Where(v =>v.IsVisible && v.AccountId == accountId)
+                .Where(v => v.IsVisible && v.AccountId == accountId)
                 .SumAsync(v => v.Debit - v.Credit);
 
             // 3. خروجی
@@ -227,14 +227,29 @@ namespace CY_WebApi.Controllers
         }
 
         [HttpGet("getUserAccountByCode")]
-        async public Task<ActionResult> getUserAccountByCode(string code,bool isDebit = true)
+        async public Task<ActionResult> getUserAccountByCode(string code, bool isDebit = true)
         {
-            var accounts = _db.Account.Where(x => x.IsVisible && x.Code.StartsWith(code)).Include(i => i.CyUser).OrderBy(o=>o.Title).AsQueryable();
+            var accounts =await _db.Account.Where(x => x.IsVisible && x.Code.StartsWith(code)).Include(i => i.CyUser).OrderBy(o => o.Title).ToListAsync();
 
+            var accountIdList = accounts.Select(x => x.ID).ToList();
+
+            var allVoucherItems = await _db.VoucherItem.Where(x => x.IsVisible && accountIdList.Contains((int)x.AccountId)).ToListAsync();
+
+            foreach (var item in accounts)
+            {
+
+                var balance = await _db.VoucherItem
+                .Where(v => v.IsVisible && v.AccountId == item.ID)
+                .SumAsync(v => v.Debit - v.Credit);
+
+                item.MandehHesab=balance;
+            }
+
+            await _db.SaveChangesAsync();
 
             if (isDebit)
             {
-              var debitUsers= await accounts.Where(x=>x.MandehHesab >0)?.Select(s => new
+                var debitUsers = accounts.Where(x => x.MandehHesab > 0)?.Select(s => new
                 {
                     id = s.ID,
                     userName = s.Title,
@@ -243,23 +258,23 @@ namespace CY_WebApi.Controllers
                     phone = s.CyUser.Phone,
                     userId = s.CyUser.ID,
 
-                }).ToListAsync();
+                }).ToList();
 
                 return Ok(debitUsers);
             }
 
 
 
-          var creditUsers=  await accounts.Where(x => x.MandehHesab < 0).Select(s => new
-                 {
-                     id = s.ID,
-                     userName = s.Title,
-                     mandeh = s.MandehHesab,
-                     mobile = s.CyUser.Mobile,
-                     phone = s.CyUser.Phone,
-                     userId = s.CyUser.ID,
+            var creditUsers = accounts.Where(x => x.MandehHesab < 0).Select(s => new
+            {
+                id = s.ID,
+                userName = s.Title,
+                mandeh = s.MandehHesab,
+                mobile = s.CyUser.Mobile,
+                phone = s.CyUser.Phone,
+                userId = s.CyUser.ID,
 
-                 }).ToListAsync();
+            }).ToList();
 
 
             return Ok(creditUsers);
@@ -283,7 +298,7 @@ namespace CY_WebApi.Controllers
                     Description = s.Voucher.Description,
                     AccountName = s.Account.Title,
                     CreatDate = s.CreateDate,
-                    VoucherDate=s.Voucher.VoucherDate
+                    VoucherDate = s.Voucher.VoucherDate
                 }).OrderByDescending(o => o.CreatDate).ToArrayAsync();
 
 
@@ -298,7 +313,7 @@ namespace CY_WebApi.Controllers
             foreach (var item in AllAccounts)
             {
                 var balance = await _db.VoucherItem
-                 .Where(v =>v.IsVisible &&  v.AccountId == item.ID)
+                 .Where(v => v.IsVisible && v.AccountId == item.ID)
                  .SumAsync(v => v.Debit - v.Credit);
 
                 // 3. خروجی
@@ -346,7 +361,7 @@ namespace CY_WebApi.Controllers
         [HttpGet("mandeHesabC")]
         async public Task<ActionResult> mandeHesabC()
         {
-            var AllAccounts = await _db.Account.Where(x => x.IsVisible && x.MandehHesab==0).ToListAsync();
+            var AllAccounts = await _db.Account.Where(x => x.IsVisible && x.MandehHesab == 0).ToListAsync();
 
             foreach (var item in AllAccounts)
             {
@@ -367,8 +382,8 @@ namespace CY_WebApi.Controllers
         [HttpGet("mizan")]
         async public Task<ActionResult> mizan()
         {
-            var factors = await _db.CyOrder.Where(x => x.IsVisible && x.OrderMode == Ordermode.ShopFromCustomer).Select(s=>s.FactorNumber).ToListAsync();
-            var vouchers =await _db.Voucher.Where(x => factors.Contains((int)x.ReferenceId)).Include(i=>i.Items).Select(s=>s.Items).ToListAsync();
+            var factors = await _db.CyOrder.Where(x => x.IsVisible && x.OrderMode == Ordermode.ShopFromCustomer).Select(s => s.FactorNumber).ToListAsync();
+            var vouchers = await _db.Voucher.Where(x => factors.Contains((int)x.ReferenceId)).Include(i => i.Items).Select(s => s.Items).ToListAsync();
 
             int count = 0;
 
@@ -376,12 +391,12 @@ namespace CY_WebApi.Controllers
             {
                 foreach (var item2 in item)
                 {
-                    if(item2.AccountId==24 && item2.Debit == 0 && item2.Credit!=0)
+                    if (item2.AccountId == 24 && item2.Debit == 0 && item2.Credit != 0)
                     {
                         item2.Debit = item2.Credit;
                         item2.Credit = 0;
-                        count = count+1;
-                        item2.IsEdited=true;
+                        count = count + 1;
+                        item2.IsEdited = true;
                     }
                 }
             }
@@ -389,7 +404,7 @@ namespace CY_WebApi.Controllers
             await _db.SaveChangesAsync();
 
 
-            return Ok(new {count=vouchers.Count,count2=count, vouchers=vouchers });
+            return Ok(new { count = vouchers.Count, count2 = count, vouchers = vouchers });
 
         }
 

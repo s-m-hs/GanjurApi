@@ -5,6 +5,7 @@ using CY_DM;
 using CY_WebApi.Models;
 using CY_WebApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,7 +97,7 @@ namespace CY_WebApi.Controllers
             //{
             //    adminId = 4;
             //}
-            var query = _db.CyTask.Where(x => x.IsVisible && (x.AdminId == adminId || x.UserId == adminId));
+            var query = _db.CyTask.Where(x => x.IsVisible && (x.AdminId == adminId || x.UserId == adminId)  && x.TaskKind != TaskKind.DayNote);
 
             ///// عدم نمایش همه تسگها
             if (!show)
@@ -215,6 +216,62 @@ namespace CY_WebApi.Controllers
             return Ok(task);
         }
 
+
+
+
+        [Authorize]
+        [HttpPost("addNote")]
+        async public Task<ActionResult> addNote([FromBody] TaskDTO dto)
+        {
+            var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaim, out int userId)) return Unauthorized(new { msg = "unAutorized" });
+
+            if (dto == null) return BadRequest(new { msg = "no Input" });
+
+
+            CyTask newTask = new CyTask()
+            {
+                IsVisible = true,
+                CreateDate = DateTime.Now,
+                Title = dto.Title,
+                CompletionDate = dto.CompletionDate,
+                Description = dto.Description,
+                Hidden = false,
+                TaskKind = dto.TaskKind,
+                Score = Score.VeryBad,
+                TaskState = TaskState.Wating,
+                AdminId = null,///ایجادکننده تسک
+                UserId = userId,///مسول تسک
+                Color = dto.Color,
+                Important = dto.Important,
+            };
+
+            await _db.CyTask.AddAsync(newTask);
+            await _db.SaveChangesAsync();
+
+
+            return Ok(dto);
+
+        }
+
+        [HttpGet("getNotes")]
+        async public Task<ActionResult> getNotes(DateTime? date = null)
+        {
+            var userClaims = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaims, out int userId)) return Unauthorized();
+
+            if (date == null) date = DateTime.Today;
+
+
+            var notes = await _db.CyTask.Where(x =>x.IsVisible && x.TaskKind==TaskKind.DayNote && x.UserId==userId  && x.CompletionDate.Value.Date == date.Value.Date).Select(s=>new{
+            id=s.ID,
+            description=s.Description
+            }).ToListAsync();
+
+            return Ok(notes);
+
+
+        }
 
 
     }

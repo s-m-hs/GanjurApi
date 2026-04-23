@@ -194,7 +194,9 @@
     public enum TaskKind
     {
         Note=1 ,
-        Task=2
+        Task=2,
+        DayNote=3
+        
     }
 
     public enum Important

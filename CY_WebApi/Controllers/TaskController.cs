@@ -254,6 +254,7 @@ namespace CY_WebApi.Controllers
 
         }
 
+
         [HttpGet("getNotes")]
         async public Task<ActionResult> getNotes(DateTime? date = null)
         {
@@ -271,6 +272,42 @@ namespace CY_WebApi.Controllers
             return Ok(notes);
 
 
+        }
+
+        [Authorize]
+        [HttpPut("editeNote")]
+
+        async public Task<ActionResult> editeNote([FromBody] TaskDTO dto)
+        {
+
+
+            var userClaims = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaims, out int adminId)) return Unauthorized();
+            //if (!int.TryParse(userClaims, out int adminId))
+            //{
+            //    adminId = 4;
+            //}
+            var task = await _db.CyTask.Where(x => x.IsVisible && x.ID == dto.ID && x.UserId == adminId).FirstOrDefaultAsync();
+
+            if (task == null) return NoContent();
+
+   
+                //task.AdminId = adminId;
+                task.TaskState = dto.TaskState;
+                task.Title = dto.Title;
+                task.CompletionDate = dto.CompletionDate;
+                task.Description = dto.Description;
+                task.UserId = dto.UserId;
+                task.Hidden = false;
+                task.TaskKind = dto.TaskKind;
+                task.Color = dto.Color;
+                task.Important = dto.Important;
+                task.Score = dto.Score;
+            
+
+            await _db.SaveChangesAsync();
+
+            return Ok(task);
         }
 
 

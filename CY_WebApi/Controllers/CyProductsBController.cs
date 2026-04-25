@@ -174,47 +174,128 @@ namespace CY_WebApi.Controllers
 
 
         [HttpGet("changePriceUp")]
-        async public Task<ActionResult> changePriceUp(int manufacture,int proCategory,double percent)
-        {
-            //var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            //if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
-
-            var product=await _db.CyProduct.Where(x=>x.IsVisible && x.Supply>0 && x.CyManufacturerId== manufacture && x.CyProductCategoryId== proCategory).ToListAsync();
-            if (product == null) return BadRequest();
-            foreach (var item in product) {
-                item.Price  = item.Price + (item.Price * percent / 100);
-                item.Price2 = item.Price2 + (item.Price2 * percent / 100);
-                item.Price3 = item.Price3 + (item.Price3 * percent / 100);
-                item.Price4 = item.Price4 + (item.Price4 * percent / 100);
-            }
-
-            _db.SaveChanges();
-
-            return Ok(new { msg = "ok" });
-        }
-
-        [HttpGet("changePriceDown")]
-        async public Task<ActionResult> changePriceDown(int manufacture, int proCategory, double percent)
+        async public Task<ActionResult> changePriceUp(int? manufacture,int proCategory,double percent)
         {
             var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
 
-            var product = await _db.CyProduct.Where(x => x.IsVisible && x.Supply > 0 && x.CyManufacturerId == manufacture && x.CyProductCategoryId == proCategory).ToListAsync();
+            // اعتبارسنجی اولیه
+            if (percent <= 0)
+                return BadRequest(new { msg = "درصد باید بزرگتر از صفر باشد" });
 
-            if (product == null) return BadRequest();
+            if (proCategory == null || proCategory == 0)  return BadRequest(new { msg = "حداقل یکی از فیلدهای manufacture یا proCategory باید مقدار داشته باشد" });
 
-            foreach (var item in product)
+
+            var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply > 0);
+
+            if (manufacture!=null && manufacture!=0) query = query.Where(x => x.CyManufacturerId == manufacture);
+
+
+            var products = await query.Where(x=>x.CyProductCategoryId==proCategory).ToListAsync();
+
+            if (products == null || !products.Any())
+                return NotFound(new { msg = "محصولی با این مشخصات یافت نشد" });
+
+            foreach (var item in products) {
+                item.Price  = item.Price + (item.Price * percent / 100);
+                item.Price2 = item.Price2 + (item.Price2 * percent / 100);
+                item.Price3 = item.Price3 + (item.Price3 * percent / 100);
+                item.Price4 = item.Price4 + (item.Price4 * percent / 100);
+
+                // رند کردن به ده هزارتای بعدی
+                item.Price = RoundUpToTenThousand((long)item.Price);
+                item.Price2 = RoundUpToTenThousand((long)item.Price2);
+                item.Price3 = RoundUpToTenThousand((long)item.Price3);
+                item.Price4 = RoundUpToTenThousand((long)item.Price4);
+            }
+
+            _db.SaveChanges();
+
+            return Ok(new { msg = $"قیمت {products.Count} محصول با موفقیت به روز شد" });
+        }
+
+        [HttpGet("changePriceDown")]
+        async public Task<ActionResult> changePriceDown(int? manufacture, int proCategory, double percent)
+        {
+            var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
+
+            // اعتبارسنجی اولیه
+            if (percent <= 0)
+                return BadRequest(new { msg = "درصد باید بزرگتر از صفر باشد" });
+
+            if (proCategory == null || proCategory == 0) return BadRequest(new { msg = "حداقل یکی از فیلدهای manufacture یا proCategory باید مقدار داشته باشد" });
+
+
+            var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply > 0);
+
+            if (manufacture != null && manufacture != 0) query = query.Where(x => x.CyManufacturerId == manufacture);
+
+
+            var products = await query.Where(x => x.CyProductCategoryId == proCategory).ToListAsync();
+
+            if (products == null || !products.Any())
+                return NotFound(new { msg = "محصولی با این مشخصات یافت نشد" });
+
+            foreach (var item in products)
             {
                 item.Price  = item.Price - (item.Price * percent / 100);
                 item.Price2 = item.Price2 - (item.Price2 * percent / 100);
                 item.Price3 = item.Price3 - (item.Price3 * percent / 100);
                 item.Price4 = item.Price4 - (item.Price4 * percent / 100);
+
+                // رند کردن به ده هزارتای بعدی
+                item.Price = RoundUpToTenThousand((long)item.Price);
+                item.Price2 = RoundUpToTenThousand((long)item.Price2);
+                item.Price3 = RoundUpToTenThousand((long)item.Price3);
+                item.Price4 = RoundUpToTenThousand((long)item.Price4);
             }
 
             _db.SaveChanges();
 
-            return Ok(new {msg="ok"});
+            return Ok(new { msg = $"قیمت {products.Count} محصول با موفقیت به روز شد" });
 
+        }
+
+
+        [HttpGet("changePriceUpByPrice2")]
+        async public Task<ActionResult> changePriceUpByPrice2(int? manufacture, int proCategory)
+        {
+            var userClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaim, out int userId)) return Unauthorized();
+
+            // اعتبارسنجی اولیه
+     
+            if (proCategory == null || proCategory == 0) return BadRequest(new { msg = "حداقل یکی از فیلدهای manufacture یا proCategory باید مقدار داشته باشد" });
+
+
+            var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply > 0);
+
+            if (manufacture != null && manufacture != 0) query = query.Where(x => x.CyManufacturerId == manufacture);
+
+
+            var products = await query.Where(x => x.CyProductCategoryId == proCategory).ToListAsync();
+
+            if (products == null || !products.Any())
+                return NotFound(new { msg = "محصولی با این مشخصات یافت نشد" });
+
+            foreach (var item in products)
+            {
+                item.Price  = item.Price  + (item.Price * 25 / 100);
+                //item.Price2 = item.Price2 + (item.Price2 * percent / 100);
+                item.Price3 = item.Price3 + (item.Price3 * 10 / 100);
+                item.Price4 = item.Price4 + (item.Price4 * 20 / 100);
+
+                // رند کردن به ده هزارتای بعدی
+                item.Price = RoundUpToTenThousand((long)item.Price);
+                //item.Price2 = RoundUpToTenThousand((long)item.Price2);
+                item.Price3 = RoundUpToTenThousand((long)item.Price3);
+                item.Price4 = RoundUpToTenThousand((long)item.Price4);
+            }
+
+            _db.SaveChanges();
+
+            return Ok(new { msg = $"قیمت {products.Count} محصول با موفقیت به روز شد" });
         }
 
 
@@ -222,9 +303,13 @@ namespace CY_WebApi.Controllers
 
 
 
+        private long RoundUpToTenThousand(long price)
+        {
+            if (price % 10000 == 0)
+                return price;
 
-
-
+            return ((price / 10000) + 1) * 10000;
+        }
 
 
 

@@ -466,6 +466,14 @@ namespace CY_WebApi.Controllers
 
         }
 
+
+
+        /// <summary>
+        /// فاکتور خری
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <param name="ordermode"></param>
+        /// <returns></returns>
         [HttpPost("addOrderB")]
         public async Task<ActionResult> AddOrderB(
     [FromBody] OrderDTO dto,
@@ -519,6 +527,16 @@ namespace CY_WebApi.Controllers
                     product.Price2 = basePrice * 1.15;
                     product.Price3 = basePrice * 1.20;
                     product.Price4 = basePrice * 1.30;
+
+
+
+                    product.Price = RoundUpToTenThousand((long)product.Price);
+                    product.NoOffPrice = RoundUpToTenThousand((long)product.NoOffPrice);
+                    product.Price2 = RoundUpToTenThousand((long)product.Price2);
+                    product.Price3 = RoundUpToTenThousand((long)product.Price3);
+                    product.Price4 = RoundUpToTenThousand((long)product.Price4);
+
+
                 }
                 #endregion
 
@@ -601,124 +619,13 @@ namespace CY_WebApi.Controllers
             }
         }
 
+  
+
         /// <summary>
-        /// فاکتورخرید
+        /// ویرایش فاکتور خرید
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        //[HttpPost("addOrderB")]
-        //async public Task<ActionResult> addOrderB([FromBody] OrderDTO dto, Ordermode ordermode)
-        //{
-        //    if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
-
-        //    var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
-
-        //    var order = _mapper.Map<CyOrder>(dto);
-
-        //    order.CreateDate = dto.CreatDate;
-
-
-        //    var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
-
-
-
-        //    order.OrderItems = orderItems;
-
-        //    var query = _db.CyProduct.Where(x => x.IsVisible && x.CyProductCategoryId != null).ToList();
-
-
-
-
-        //    ///اضافه کردن به موجودی کالا 
-        //    foreach (var item in dto.OrderItems)
-        //    {
-        //        var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-        //        if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
-
-
-        //        var currentProduct = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-
-        //        if (currentProduct == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
-
-        //        double baePrice = item.UnitPrice;
-
-        //        currentProduct.Supply += item.Quantity;
-        //        currentProduct.ShopPrice = item.UnitPrice;
-
-        //        currentProduct.Price = baePrice + (baePrice * 40 / 100);   ///15-2   20-3 30-4   40-1  
-        //        currentProduct.NoOffPrice = baePrice + (baePrice * 40 / 100);
-        //        currentProduct.Price2 = baePrice + (baePrice * 15 / 100);   ///15-2   20-3 30-4   40-1    
-        //        currentProduct.Price3 = baePrice + (baePrice * 20 / 100);   ///15-2   20-3 30-4   40-1    
-        //        currentProduct.Price4 = baePrice + (baePrice * 30 / 100);   ///15-2   20-3 30-4   40-1    
-
-        //    }
-
-
-        //    /////ثبت سند حسابداری
-        //    Voucher newVoucher = new Voucher()
-        //    {
-        //        VoucherDate = DateTime.Now,
-        //        ReferenceType = ordermode == Ordermode.ShopFromCustomer ? "فاکتور خرید" : "فاکتور برگشت از فروش",
-        //        ReferenceId = 0,
-        //        Description = dto.StatusText,
-        //        Items =
-        //        {
-        //            ///////سندافزودن به موجودی 
-
-        //            ///افزودن به موجودی کالا
-        //            new VoucherItem{
-        //                //AccountId=24,
-
-        //                ///sndb2
-        //                AccountId=AccountSnDb.MojodiKala,
-        //                ToAccountId=(int)user.AccountId,
-        //                Debit=(double)dto.FanalTotalAmount,
-        //                Credit=0
-        //            },
-
-        //                    ////بستانکار کردن تامین کننده
-        //            new VoucherItem
-        //            {
-        //                //ToAccountId=24,
-
-        //                ///sndb2
-        //                AccountId=(int)user.AccountId,
-        //                ToAccountId=AccountSnDb.MojodiKala,
-        //                Debit=0,
-        //                Credit=(double)dto.FanalTotalAmount
-        //            },
-
-        //        }
-        //    };
-        //    foreach (var item in newVoucher.Items)
-        //    {
-        //        var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-        //        currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
-        //        item.MandehHesab = currentAccount.MandehHesab;
-
-        //    }
-
-        //    ////جنریت کردن کد فاکتور
-        //    int nextFactorNum = await _db.CyOrder
-        //   .Select(f => (int?)f.FactorNumber)
-        //   .MaxAsync() ?? 0;
-        //    nextFactorNum += 1;
-        //    order.FactorNumber = nextFactorNum;
-        //    order.OrderMode = ordermode;
-
-        //    await _db.CyOrder.AddAsync(order);
-
-        //    newVoucher.ReferenceId = order.FactorNumber;
-
-        //    await _db.AddRangeAsync(newVoucher.Items);
-        //    await _db.Voucher.AddAsync(newVoucher);
-
-
-        //    await _db.SaveChangesAsync();
-
-        //    return Ok(new { order = order, factoNumber = nextFactorNum });
-        //}
-
         [HttpPut("editOrderB")]
         public async Task<ActionResult> editOrderB([FromBody] OrderDTO dto)
         {
@@ -788,6 +695,14 @@ namespace CY_WebApi.Controllers
                 currentProductAvalable.Price2 = baePrice + (baePrice * 15 / 100);   ///15-2   20-3 30-4   40-1    
                 currentProductAvalable.Price3 = baePrice + (baePrice * 20 / 100);   ///15-2   20-3 30-4   40-1    
                 currentProductAvalable.Price4 = baePrice + (baePrice * 30 / 100);   ///15-2   20-3 30-4   40-1
+
+
+                currentProductAvalable.Price = RoundUpToTenThousand((long)currentProductAvalable.Price); ;   ///15-2   20-3 30-4   40-1    
+                currentProductAvalable.Price2 = RoundUpToTenThousand((long)currentProductAvalable.Price2);   ///15-2   20-3 30-4   40-1    
+                currentProductAvalable.Price3 = RoundUpToTenThousand((long)currentProductAvalable.Price3);   ///15-2   20-3 30-4   40-1    
+                currentProductAvalable.Price4 = RoundUpToTenThousand((long)currentProductAvalable.Price4);   ///15-2   20-3 30-4   40-1
+
+
             }
 
 
@@ -1057,6 +972,16 @@ namespace CY_WebApi.Controllers
 
             return Ok(dto);
         }
+
+        private long RoundUpToTenThousand(long price)
+        {
+            if (price % 10000 == 0)
+                return price;
+
+            return ((price / 10000) + 1) * 10000;
+        }
+
+
 
     }
 }

@@ -311,5 +311,20 @@ namespace CY_WebApi.Controllers
         }
 
 
+        [HttpDelete("deleteNote")]
+
+        async public Task<ActionResult> deleteNote(int taskId)
+        {
+
+            var task = _db.CyTask.Where(x => x.IsVisible && x.ID == taskId).FirstOrDefault();
+            if (task == null) return NoContent();
+
+            task.IsVisible = false;
+
+            await _db.SaveChangesAsync();
+
+            return Ok(task);
+        }
+
     }
 }

@@ -63,29 +63,29 @@ namespace CY_WebApi.Controllers
                 id = s.ID,
                 Description = s.Description,
                 ShopPrice = s.ShopPrice,
-                Price=s.Price,
-                Price2=s.Price2,
-                Price3=s.Price3,
-                Price4=s.Price4,
-                Price5=s.Price5,
-                NoOffPrice=s.NoOffPrice,
-                PartNo=s.PartNo,
-                MfrNo=s.MfrNo,
-                ProductCode=s.ProductCode,
-                DatasheetUrl=s.DatasheetUrl,
-                Supply=s.Supply,
-                CyCategoryId=s.CyCategoryId,
-                CyProductCategoryId=s.CyProductCategoryId,
-                CyManufacturerId=s.CyManufacturerId,
-                status=s.status,
-                manufacName=s.CyManufacturer.Name,
-                proCateName=s.CyProductCategory.Name
+                Price = s.Price,
+                Price2 = s.Price2,
+                Price3 = s.Price3,
+                Price4 = s.Price4,
+                Price5 = s.Price5,
+                NoOffPrice = s.NoOffPrice,
+                PartNo = s.PartNo,
+                MfrNo = s.MfrNo,
+                ProductCode = s.ProductCode,
+                DatasheetUrl = s.DatasheetUrl,
+                Supply = s.Supply,
+                CyCategoryId = s.CyCategoryId,
+                CyProductCategoryId = s.CyProductCategoryId,
+                CyManufacturerId = s.CyManufacturerId,
+                status = s.status,
+                manufacName = s.CyManufacturer.Name,
+                proCateName = s.CyProductCategory.Name
 
-            }).OrderByDescending(o=>o.id
-            
-            
+            }).OrderByDescending(o => o.id
+
+
             ).ToListAsync();
-        
+
             return Ok(allProducts);
         }
 
@@ -451,13 +451,13 @@ namespace CY_WebApi.Controllers
                             }
                             else
                             {
-                                newProduct.CyManufacturer = manufacturer; 
+                                newProduct.CyManufacturer = manufacturer;
                             }
                         }
                         _repo.InsertWithoutSave(newProduct);
                     }
                 }
-                        return Ok(await _db.SaveChangesAsync());
+                return Ok(await _db.SaveChangesAsync());
             }
             else
             {
@@ -639,105 +639,105 @@ namespace CY_WebApi.Controllers
         [HttpGet("TorobProduct")]
         public async Task<ActionResult<ProductForTorobDTO>> getProductForTorob()
         {
-            var offer= await _db.CyKeyData.Where(x=>x.ID==13).FirstOrDefaultAsync();
+            var offer = await _db.CyKeyData.Where(x => x.ID == 13).FirstOrDefaultAsync();
             double doubleOffer = double.Parse(offer.Value);
 
-            var products = await _db.CyProduct.Where(x => x.IsVisible && x.Supply != 0 && x.CyProductCategory!=null).Select(u =>
+            var products = await _db.CyProduct.Where(x => x.IsVisible && x.Supply != 0 && x.CyProductCategory != null).Select(u =>
                           new ProductForTorobDTO()
                           {
-                              old_price = u.Price/10,
-                              price = u.Price == u.NoOffPrice ? (u.Price * doubleOffer)/10 : u.NoOffPrice/10,
+                              old_price = u.Price / 10,
+                              price = u.Price == u.NoOffPrice ? (u.Price * doubleOffer) / 10 : u.NoOffPrice / 10,
                               availability = "instock",
-                              page_url = $"https://sanecomputer.com/product/{u.ID}" ,
+                              page_url = $"https://sanecomputer.com/product/{u.ID}",
                               product_id = u.ID
 
-                          }).OrderBy(y=>y.product_id).Reverse().ToListAsync();
-        
+                          }).OrderBy(y => y.product_id).Reverse().ToListAsync();
+
             return Ok(products);
         }
-        
-        
-        [HttpGet("breadcrumbs/{id}")] 
+
+
+        [HttpGet("breadcrumbs/{id}")]
         public async Task<ActionResult> breadcrumb(int id)
         {
-            
-            List<string>  breadCrumList = new List<string>() ;
 
-            var product = await _db.CyProduct.Where(x=>x.ID == id).FirstOrDefaultAsync();
+            List<string> breadCrumList = new List<string>();
+
+            var product = await _db.CyProduct.Where(x => x.ID == id).FirstOrDefaultAsync();
             breadCrumList.Add(product.Name);
-            var productcategory= await _db.CyProductCategory.Where(x=>x.ID == product.CyProductCategoryId).FirstOrDefaultAsync();
-             breadCrumList.Add(productcategory.Name);
+            var productcategory = await _db.CyProductCategory.Where(x => x.ID == product.CyProductCategoryId).FirstOrDefaultAsync();
+            breadCrumList.Add(productcategory.Name);
 
             if (productcategory.RootId == null || productcategory.RootId == Convert.ToInt32(MainProductCategory.hardWare) || productcategory.RootId == Convert.ToInt32(MainProductCategory.Accessories)) return Ok(breadCrumList);
-            var productcategoryB=await _db.CyProductCategory.Where(x=> x.ID == productcategory.RootId).FirstOrDefaultAsync();
+            var productcategoryB = await _db.CyProductCategory.Where(x => x.ID == productcategory.RootId).FirstOrDefaultAsync();
             breadCrumList.Add(productcategoryB.Name);
             return Ok(breadCrumList);
         }
-      
+
         /// <summary>
         /// لیست کالاهای موجود
         /// </summary>
         /// <returns></returns>
-        [HttpGet("getExellFromProduct")]    
+        [HttpGet("getExellFromProduct")]
         public async Task<IActionResult> getExellFromProduct()
-    {
-        var products = await _db.CyProduct
-            .Where(x => x.IsVisible
-                && x.CyProductCategoryId != null
-                && x.CyCategoryId != null
-                && x.Supply > 0
-                )
-            .Select(s => new
-            {
-                s.ID,
-                s.Name,
-                s.Supply,
-                s.Price,
-                s.CyManufacturerId,
-                s.CyProductCategoryId,
-                s.CyCategoryId,
-            })
-            .ToListAsync();
-
-        using var workbook = new XLWorkbook();
-        var worksheet = workbook.Worksheets.Add("Products");
-
-        // Header
-        worksheet.Cell(1, 1).Value = "ID";
-        worksheet.Cell(1, 2).Value = "name";
-        worksheet.Cell(1, 3).Value = "supply ";
-        worksheet.Cell(1, 4).Value = " price";
-        worksheet.Cell(1, 5).Value = "manufacturId ";
-        worksheet.Cell(1, 6).Value = " proCategoryId";
-        worksheet.Cell(1, 7).Value = "categoryId";
-
-        // Data
-        int row = 2;
-        foreach (var item in products)
         {
-            worksheet.Cell(row, 1).Value = item.ID;
-            worksheet.Cell(row, 2).Value = item.Name;
-            worksheet.Cell(row, 3).Value = item.Supply;
-            worksheet.Cell(row, 4).Value = item.Price;
-            worksheet.Cell(row, 5).Value = item.CyManufacturerId;
-            worksheet.Cell(row, 6).Value = item.CyProductCategoryId;
-            worksheet.Cell(row, 7).Value = item.CyCategoryId;
-            row++;
+            var products = await _db.CyProduct
+                .Where(x => x.IsVisible
+                    && x.CyProductCategoryId != null
+                    && x.CyCategoryId != null
+                    && x.Supply > 0
+                    )
+                .Select(s => new
+                {
+                    s.ID,
+                    s.Name,
+                    s.Supply,
+                    s.Price,
+                    s.CyManufacturerId,
+                    s.CyProductCategoryId,
+                    s.CyCategoryId,
+                })
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Products");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "ID";
+            worksheet.Cell(1, 2).Value = "name";
+            worksheet.Cell(1, 3).Value = "supply ";
+            worksheet.Cell(1, 4).Value = " price";
+            worksheet.Cell(1, 5).Value = "manufacturId ";
+            worksheet.Cell(1, 6).Value = " proCategoryId";
+            worksheet.Cell(1, 7).Value = "categoryId";
+
+            // Data
+            int row = 2;
+            foreach (var item in products)
+            {
+                worksheet.Cell(row, 1).Value = item.ID;
+                worksheet.Cell(row, 2).Value = item.Name;
+                worksheet.Cell(row, 3).Value = item.Supply;
+                worksheet.Cell(row, 4).Value = item.Price;
+                worksheet.Cell(row, 5).Value = item.CyManufacturerId;
+                worksheet.Cell(row, 6).Value = item.CyProductCategoryId;
+                worksheet.Cell(row, 7).Value = item.CyCategoryId;
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Products.xlsx"
+            );
         }
-
-        // Auto fit columns
-        worksheet.Columns().AdjustToContents();
-
-        using var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        stream.Position = 0;
-
-        return File(
-            stream.ToArray(),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Products.xlsx"
-        );
-    }
 
 
         /// <summary>
@@ -816,7 +816,7 @@ namespace CY_WebApi.Controllers
                     s.Description,
                     s.ImageUrl,
                     s.Code
-     
+
                 })
                 .ToListAsync();
 
@@ -829,7 +829,7 @@ namespace CY_WebApi.Controllers
             worksheet.Cell(1, 3).Value = "Code ";
             worksheet.Cell(1, 4).Value = " Description";
             worksheet.Cell(1, 5).Value = " ImageUrl";
-         
+
 
             // Data
             int row = 2;
@@ -840,7 +840,7 @@ namespace CY_WebApi.Controllers
                 worksheet.Cell(row, 3).Value = item.Code;
                 worksheet.Cell(row, 4).Value = item.Description;
                 worksheet.Cell(row, 5).Value = item.ImageUrl;
-    
+
                 row++;
             }
 
@@ -859,6 +859,86 @@ namespace CY_WebApi.Controllers
         }
 
 
+
+        /// <summary>
+        /// لیست کالاهای موجود
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("getExellFromProductByAllPrice")]
+        public async Task<IActionResult> getExellFromProductByAllPrice()
+        {
+            var products = await _db.CyProduct
+                .Where(x => x.IsVisible
+                    && x.CyProductCategoryId != null
+                    && x.CyCategoryId != null
+                    && x.Supply > 0
+                    )
+                .Select(s => new
+                {
+                    s.ID,
+                    s.Name,
+                    s.Supply,
+                    s.ShopPrice,
+                    s.Price,
+                    s.Price2,
+                    s.Price3,
+                    s.Price4,
+                    s.CyManufacturerId,
+                    s.CyProductCategoryId,
+                    s.CyCategoryId
+                })
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Products");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "ID";
+            worksheet.Cell(1, 2).Value = "عنوان کالا";
+            worksheet.Cell(1, 3).Value = "موجودی ";
+            worksheet.Cell(1, 4).Value = " ق خرید";
+            worksheet.Cell(1, 5).Value = " ق مشتری";
+            worksheet.Cell(1, 6).Value = " ق همکار 1";
+            worksheet.Cell(1, 7).Value = " ق همکار 2";
+            worksheet.Cell(1, 8).Value = " ق همکار3";
+            worksheet.Cell(1, 9).Value = "CyManufacturerId";
+            worksheet.Cell(1, 10).Value = "CyProductCategoryId";
+            worksheet.Cell(1, 11).Value = "CyCategoryId";
+
+
+            // Data
+            int row = 2;
+            foreach (var item in products)
+            {
+                worksheet.Cell(row, 1).Value = item.ID;
+                worksheet.Cell(row, 2).Value = item.Name;
+                worksheet.Cell(row, 3).Value = item.Supply;
+                worksheet.Cell(row, 4).Value = item.ShopPrice;
+                worksheet.Cell(row, 5).Value = item.Price;
+                worksheet.Cell(row, 6).Value = item.Price2;
+                worksheet.Cell(row, 7).Value = item.Price3;
+                worksheet.Cell(row, 8).Value = item.Price4;
+                worksheet.Cell(row, 9).Value = item.CyManufacturerId;
+                worksheet.Cell(row, 10).Value = item.CyProductCategoryId;
+                worksheet.Cell(row, 11).Value = item.CyCategoryId;
+
+
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Products.xlsx"
+            );
+        }
 
 
 

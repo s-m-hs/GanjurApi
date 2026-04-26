@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.Configuration.Annotations;
+using ClosedXML.Excel;
 using CY_BM;
 using CY_DM;
 using CY_WebApi.Models;
@@ -450,6 +451,92 @@ namespace CY_WebApi.Controllers
 
         //    return Ok(orderItemList); 
         //}
+
+
+
+        /// <summary>
+        /// اکسل از مشتریان بدهکار و بستانکار
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="isDebit"></param>
+        /// <returns></returns>
+        [HttpGet("getExellFromUserBalance")]
+        async public Task<ActionResult> getExellFromUserBalance(string code)
+        {
+            var accounts = await _db.Account.Where(x => x.IsVisible && x.Code.StartsWith(code)).Include(i => i.CyUser).OrderBy(o => o.Title).ToListAsync();
+
+            var accountIdList = accounts.Select(x => x.ID).ToList();
+
+            var allVoucherItems = await _db.VoucherItem.Where(x => x.IsVisible && accountIdList.Contains((int)x.AccountId)).ToListAsync();
+
+            foreach (var item in accounts)
+            {
+
+                var balance = await _db.VoucherItem
+                .Where(v => v.IsVisible && v.AccountId == item.ID)
+                .SumAsync(v => v.Debit - v.Credit);
+
+                item.MandehHesab = balance;
+            }
+
+            var Users = accounts.Where(x => x.MandehHesab != 0).Select(s => new
+            {
+                id = s.ID,
+                userName = s.Title,
+                mandeh = s.MandehHesab,
+                mobile = s.CyUser.Mobile,
+                phone = s.CyUser.Phone,
+                userId = s.CyUser.ID,
+
+            }).OrderBy(o => o.userName).OrderByDescending(o=>o.mandeh).ToList();
+
+
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Users");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "نام طرف حساب";
+            worksheet.Cell(1, 2).Value = "همراه";
+            worksheet.Cell(1, 3).Value = "تلفن ";
+            worksheet.Cell(1, 4).Value = " مانده حساب";
+            worksheet.Cell(1, 5).Value = "ID ";
+   
+
+            // Data
+            int row = 2;
+            foreach (var item in Users)
+            {
+                worksheet.Cell(row, 1).Value = item.userName;
+                worksheet.Cell(row, 2).Value = item.mobile;
+                worksheet.Cell(row, 3).Value = item.phone;
+                if (decimal.TryParse(item.mandeh.ToString(), out decimal mandehValue))
+                {
+                    worksheet.Cell(row, 4).Value = mandehValue.ToString("N0");
+                }
+                else
+                {
+                    worksheet.Cell(row, 4).Value = item.mandeh; // fallback به مقدار اصلی
+                }
+                worksheet.Cell(row, 5).Value = item.id;
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Users.xlsx"
+            );
+        }
+
+
 
 
 

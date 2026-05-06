@@ -297,6 +297,29 @@ namespace CY_WebApi.Controllers
         }
 
 
+        [HttpPut("editUser")]
+        async public Task<ActionResult> editUser([FromBody] UserDTO dto)
+        {
+            var currentUser=_db.CyUser.Where(x=>x.IsVisible && x.ID == dto.ID).FirstOrDefault();
+            if (currentUser == null) return BadRequest();
+
+            currentUser.CyUsNm = dto.CyUsNm;
+            currentUser.UserCodeA=dto.UserCodeA;
+            currentUser.UserCodeB=dto.UserCodeB;
+            currentUser.Mobile=dto.Mobile;
+            currentUser.Phone=dto.Phone;
+            currentUser.MelliCode=dto.MelliCode;
+            currentUser.userType=dto.userType;
+            currentUser.Status=dto.Status;
+            currentUser.PartnerStatus=dto.PartnerStatus;
+            currentUser.UserAddress=dto.UserAddress;
+
+
+            await _db.SaveChangesAsync();
+
+            return Ok(new {msg="ok"});
+        }
+
 
         [HttpDelete("deletUser")]
         public async Task<ActionResult> deletUser(int id)

@@ -24,7 +24,7 @@ namespace CY_WebApi.Services
 
                 string subdomain = context.HttpContext.Request.Headers.Origin.ToString(); // Get the current subdomain
 
-                string tokenName = subdomain.Contains("admin") ? "SaneAdminAccessToken" : "SaneaccessToken"; // Set the token name based on subdomain
+                string tokenName ="GanjuraccessToken"; // Set the token name based on subdomain
 
                 context.HttpContext.Request.Cookies.TryGetValue(tokenName, out var jwtToken); // Get the token by name
 

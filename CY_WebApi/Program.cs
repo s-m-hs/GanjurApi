@@ -115,9 +115,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         OnMessageReceived = context =>
         {
-            var tokenClient = context.Request.Cookies["SaneaccessToken"];
-            var tokenAdmin = context.Request.Cookies["SaneAdminAccessToken"];
-            var token = tokenClient != null ? tokenClient : tokenAdmin; // یا هر نام کوکی که تو ذخیره کردی
+            var token = context.Request.Cookies["GanjuraccessToken"];
+
             if (!string.IsNullOrEmpty(token))
             {
                 context.Token = token;

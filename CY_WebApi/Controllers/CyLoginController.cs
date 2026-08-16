@@ -39,8 +39,8 @@ namespace CY_WebApi.Controllers
 
             var token = _jwtService.GenerateToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken(user);
-            _jwtService.SetRefreshTokenInCookie(refreshToken, HttpContext, "Admin");
-            _jwtService.SetTokenInCookie(token, HttpContext, "Admin");
+            _jwtService.SetRefreshTokenInCookie(refreshToken, HttpContext);
+            _jwtService.SetTokenInCookie(token, HttpContext);
             return Ok(new { token = token, type = user.userType ,userId=user.ID});
 
 
@@ -88,7 +88,7 @@ namespace CY_WebApi.Controllers
         [HttpGet("refreshToken")]
         public IActionResult refreshToken()
         {
-            if (!Request.Cookies.TryGetValue("SaneAdminrefreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
+            if (!Request.Cookies.TryGetValue("GanjurrefreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             {
                 return Unauthorized("Refresh token not found");
             }
@@ -122,10 +122,10 @@ namespace CY_WebApi.Controllers
 
                 //Domain = "sapi.sanecomputer.com"
             };
-            Response.Cookies.Delete("SaneAdminAccessToken", options);
+            Response.Cookies.Delete("GanjuraccessToken", options);
 
             // Set new token in cookies
-            _jwtService.SetTokenInCookie(newAccessToken, HttpContext,"admin");
+            _jwtService.SetTokenInCookie(newAccessToken, HttpContext);
 
             return Ok(new { token = newAccessToken,userId=userid });
         }
@@ -135,7 +135,7 @@ namespace CY_WebApi.Controllers
         [HttpGet("logoutAdmin")]
         public async Task<ActionResult> Logout()
         {
-            var refreshToken = Request.Cookies["SaneAdminrefreshToken"];
+            var refreshToken = Request.Cookies["GanjurrefreshToken"];
             if (refreshToken == null) return Ok();
 
             // حذف کوکی
@@ -149,8 +149,8 @@ namespace CY_WebApi.Controllers
                 Domain = DomainConfig.Domain
             };
 
-            Response.Cookies.Delete("SaneAdminAccessToken", optins);
-            Response.Cookies.Delete("SaneAdminrefreshToken", optins);
+            Response.Cookies.Delete("GanjuraccessToken", optins);
+            Response.Cookies.Delete("GanjurrefreshToken", optins);
 
             return Ok(new { msg = "Logged out successfully" });
         }

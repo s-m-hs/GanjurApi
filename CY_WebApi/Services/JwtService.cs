@@ -203,9 +203,10 @@ namespace CY_WebApi.Services
             return tokenHandler.WriteToken(securityToken);
         }
 
-        public void SetTokenInCookie(string token, HttpContext context, string domain = "client")
+        public void SetTokenInCookie(string token, HttpContext context)
         {
-            var name = domain == "client" ? "SaneaccessToken" : "SaneAdminAccessToken";
+            var name = "GanjuraccessToken" ;
+            //var name = domain == "client" ? "SaneaccessToken" : "SaneAdminAccessToken";
 
             context.Response.Cookies.Append(name, token, new CookieOptions
             {
@@ -219,9 +220,9 @@ namespace CY_WebApi.Services
             });
         }
 
-        public void SetRefreshTokenInCookie(string token, HttpContext context, string domain = "client")
+        public void SetRefreshTokenInCookie(string token, HttpContext context)
         {
-            var name = domain == "client" ? "SanerefreshToken" : "SaneAdminrefreshToken";
+            var name = "GanjurrefreshToken" ;
 
             context.Response.Cookies.Append(name, token, new CookieOptions
             {

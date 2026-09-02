@@ -15,7 +15,7 @@ namespace CY_WebApi.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
+    //[TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyProductsBController : ControllerBase
     {
         private readonly CyContext _db;

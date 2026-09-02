@@ -16,7 +16,7 @@ namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
+    //[TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyUsersController : ControllerBase
     {
         private readonly IMapper _mapper;

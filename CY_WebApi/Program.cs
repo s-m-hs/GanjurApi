@@ -1,16 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text;
+using System.Threading.RateLimiting;
 using CY_DM;
 using CY_WebApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.OpenApi.Models;
 using CY_WebApi.Services;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.AspNetCore.Authentication;
-using Serilog;
 using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Session;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add support to logging with SERILOG
@@ -27,6 +29,21 @@ builder.Services.AddSession(options => {
 // Add services to the container.
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllers();
+
+///هر IP
+//در هر دقیقه
+//فقط ۵ درخواست لاگین 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("LoginLimiter", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+});
+
 builder.Services.AddScoped<ExcelReader>();
 builder.Services.AddScoped<RecaptchaService>();
 builder.Services.AddScoped<SmsService>();
@@ -130,7 +147,7 @@ builder.Services.AddScoped<JwtService>();
 
 var app = builder.Build();
 
-//app.UseMiddleware<SwaggerBasicAuthMiddleware>();
+app.UseMiddleware<SwaggerBasicAuthMiddleware>();
 
 
 app.UseSwagger();
@@ -152,6 +169,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

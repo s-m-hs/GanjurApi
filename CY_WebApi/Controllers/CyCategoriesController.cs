@@ -2,20 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
+using CY_BM;
+using CY_DM;
+using CY_WebApi.DataAccess;
+using CY_WebApi.Models;
+using CY_WebApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CY_DM;
-using CY_WebApi.Models;
-using AutoMapper;
-using CY_BM;
-using Microsoft.AspNetCore.Authorization;
-using CY_WebApi.DataAccess;
 
 namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyCategoriesController : ControllerBase
     {
        // private readonly CyContext _db;

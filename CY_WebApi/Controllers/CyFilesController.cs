@@ -2,20 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
+using CY_BM;
+using CY_DM;
+using CY_WebApi.DataAccess;
+using CY_WebApi.Models;
+using CY_WebApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CY_DM;
-using CY_WebApi.Models;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
-using CY_BM;
-using CY_WebApi.DataAccess;
-using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyFilesController : ControllerBase
     {
         private readonly IMapper _mapper;

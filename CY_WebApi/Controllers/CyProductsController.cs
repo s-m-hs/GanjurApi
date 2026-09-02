@@ -13,6 +13,7 @@ namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyProductsController : ControllerBase
     {
         private readonly IMapper _mapper;

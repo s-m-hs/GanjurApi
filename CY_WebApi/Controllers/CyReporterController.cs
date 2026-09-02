@@ -1,5 +1,6 @@
 ﻿using CY_BM;
 using CY_WebApi.Models;
+using CY_WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace CY_WebApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyReporterController :ControllerBase
     {
         private readonly CyContext _db;

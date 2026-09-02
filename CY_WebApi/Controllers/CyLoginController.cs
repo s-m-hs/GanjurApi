@@ -6,6 +6,7 @@ using CY_WebApi.Models;
 using CY_WebApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace CY_WebApi.Controllers
@@ -25,6 +26,7 @@ namespace CY_WebApi.Controllers
             _mapper = mapper;
         }
 
+        [EnableRateLimiting("LoginLimiter")]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel login)
         {
@@ -45,6 +47,18 @@ namespace CY_WebApi.Controllers
 
 
         }
+
+        [HttpGet]
+       public async Task<ActionResult> hashToBcript(int userId , string pass)
+        {
+            var user=_db.CyUser.Where(x=>x.IsVisible && x.ID == userId).FirstOrDefault();
+            user.CyHsPs = BCrypt.Net.BCrypt.HashPassword(pass);
+
+            await _db.SaveChangesAsync();
+
+            return Ok(user);
+        }
+
 
         [HttpPost("Hash")]
         public async Task<IActionResult> HashTest([FromBody] LoginModel login)

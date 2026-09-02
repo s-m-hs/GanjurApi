@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using CY_BM;
 using CY_DM;
 using CY_WebApi.Migrations;
 using CY_WebApi.Models;
@@ -14,6 +15,7 @@ namespace CY_WebApi.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyProductsBController : ControllerBase
     {
         private readonly CyContext _db;

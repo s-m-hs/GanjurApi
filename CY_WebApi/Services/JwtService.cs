@@ -31,7 +31,7 @@ namespace CY_WebApi.Services
 
         {
 
-               
+
             new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
 
             new Claim(ClaimTypes.Name, user.CyUsNm),
@@ -51,13 +51,13 @@ namespace CY_WebApi.Services
             {
 
                 Subject = new ClaimsIdentity(claims),
-                
+
                 Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.TokenExpiryInMinutes),
 
                 SigningCredentials = credentials,
 
                 Issuer = _jwtSettings.Issuer,
-                
+
                 Audience = _jwtSettings.Audience
 
             };
@@ -71,35 +71,37 @@ namespace CY_WebApi.Services
         }
         public async Task<CyUser?> IsValidUser(LoginModel login, CyContext _db)
         {
-            // Replace this with your actual user validation logic (e.g., compare with a database)
-            //var SelU = _db.CyUser.Where(c => c.CyUsNm == login.Un && c.Status == UserStatus.Active).FirstOrDefault();
-
-            //return SelU != null && login.Pw == SelU.CyHsPs ? SelU : null; // Example (replace with real logic)
 
             var somResu = await CreateAdminMaster(_db);
-            // Replace this with your actual user validation logic (e.g., compare with a database)
             var SelU = await _db.CyUser.Where(c => c.CyUsNm == login.Un && c.IsVisible &&
-                                                  (c.Status == UserStatus.Active) 
+                                                  (c.Status == UserStatus.Active)
                                                    ).FirstOrDefaultAsync();
 
-            if (SelU != null)
-            {
-                var DbPass = Crypto.DecryptStringAES(SelU.CyHsPs);
-                var HashPass = Crypto.GetStringSha512Hash(DbPass);
-
-                if (HashPass == login.Pw)
-                {
-                    return SelU;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            else
-            {
+            if (SelU == null)
                 return null;
-            }
+
+            return BCrypt.Net.BCrypt.Verify(login.Pw, SelU.CyHsPs)
+                    ? SelU
+                    : null;
+            //if (SelU != null)
+            //{
+
+            //    var DbPass = Crypto.DecryptStringAES(SelU.CyHsPs);
+            //    var HashPass = Crypto.GetStringSha512Hash(DbPass);
+
+            //    if (HashPass == login.Pw)
+            //    {
+            //        return SelU;
+            //    }
+            //    else
+            //    {
+            //        return null;
+            //    }
+            //}
+            //else
+            //{
+            //    return null;
+            //}
         }
 
         public async Task<CyUser?> IsValidUserForCustomer(LoginModel login, CyContext _db)
@@ -155,7 +157,7 @@ namespace CY_WebApi.Services
 
                 adminU = new CyUser
                 {
-                    CyHsPs = Crypto.EncryptStringAES("786Adm!n313"),
+                    CyHsPs = Crypto.EncryptStringAES("S@786Adm!n313@"),
                     CyUsNm = "AdminSys",
                     CreateDate = DateTime.Now,
                     IsVisible = true,
@@ -205,7 +207,7 @@ namespace CY_WebApi.Services
 
         public void SetTokenInCookie(string token, HttpContext context)
         {
-            var name = "GanjuraccessToken" ;
+            var name = "GanjuraccessToken";
             //var name = domain == "client" ? "SaneaccessToken" : "SaneAdminAccessToken";
 
             context.Response.Cookies.Append(name, token, new CookieOptions
@@ -222,7 +224,7 @@ namespace CY_WebApi.Services
 
         public void SetRefreshTokenInCookie(string token, HttpContext context)
         {
-            var name = "GanjurrefreshToken" ;
+            var name = "GanjurrefreshToken";
 
             context.Response.Cookies.Append(name, token, new CookieOptions
             {
@@ -231,7 +233,7 @@ namespace CY_WebApi.Services
                 IsEssential = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Domain=  DomainConfig.Domain,
+                Domain = DomainConfig.Domain,
                 //Domain = "sapi.sanecomputer.com"
             });
         }

@@ -16,6 +16,7 @@ namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [TypeAuthorize([UserType.SysAdmin, UserType.Manager, UserType.Employee])]
     public class CyUsersController : ControllerBase
     {
         private readonly IMapper _mapper;
@@ -99,7 +100,8 @@ namespace CY_WebApi.Controllers
                 await _db.Account.AddAsync(newAccount);
                 await _db.SaveChangesAsync();
 
-                cyUser.CyHsPs = Crypto.EncryptStringAES(UserDto.CyHsPs);
+                //cyUser.CyHsPs = Crypto.EncryptStringAES(UserDto.CyHsPs);
+                cyUser.CyHsPs = BCrypt.Net.BCrypt.HashPassword(UserDto.CyHsPs);
                 await _db.CyUser.AddAsync(cyUser);
                 await _db.SaveChangesAsync();
                 return Ok(UserDto);
@@ -107,9 +109,6 @@ namespace CY_WebApi.Controllers
 
             }
         }
-
-
-
 
 
 

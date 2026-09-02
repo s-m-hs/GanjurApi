@@ -4,6 +4,7 @@ using ClosedXML.Excel;
 using CY_BM;
 using CY_DM;
 using CY_WebApi.Models;
+using CY_WebApi.Services;
 using Google.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ namespace CY_WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [TypeAuthorize([UserType.SysAdmin,UserType.Manager,UserType.Employee])]
     public class AccountController : ControllerBase
     {
 

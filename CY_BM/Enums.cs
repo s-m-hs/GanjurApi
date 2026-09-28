@@ -1,6 +1,11 @@
 ﻿namespace CY_BM
 {
-
+    public enum ChangeQuantityType
+    {
+        NoChange = 0,
+        Added = 1,
+        Minus = 2
+    }
     public enum AccountType
     {
         Asset = 1,       // دارایی

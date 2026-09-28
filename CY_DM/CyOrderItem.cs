@@ -36,6 +36,13 @@ namespace CY_DM
         public OrderItemStatus Status { get; set; }
         public string? StatusText { get; set; }
         public string? Information { get; set; }
+        public ChangeQuantityType? ChangeQuantType { get; set; }= ChangeQuantityType.NoChange;
+
+        public int? QuantityChange { get; set; } = 0;
+
+        public bool? IsSynced { get; set; } = true;
+
+
 
     }
 }

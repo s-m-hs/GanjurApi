@@ -89,6 +89,12 @@ namespace CY_WebApi.Controllers
                             product = item.PartNumber
                         });
 
+                    ///برای اپدیت محصولات در سمت فروشگاه
+                    item.ChangeQuantType = ChangeQuantityType.Minus;
+                    item.QuantityChange = item.Quantity;
+                    item.IsSynced = false;
+                    ////
+                    
                     product.Supply -= item.Quantity;
                     shopPrice += (product.ShopPrice ?? 0) * item.Quantity;
                 }
@@ -195,141 +201,6 @@ namespace CY_WebApi.Controllers
                 });
             }
         }
-
-        //[HttpPost("addOrder")]
-        //async public Task<ActionResult> addOrder([FromBody] OrderDTO dto, Ordermode ordermode)
-        //{
-        //    if (dto.OrderItems == null || !dto.OrderItems.Any()) return BadRequest(new { msg = "محصولی اضافه نشده است " });
-
-        //    var user = _db.CyUser.Where(x => x.IsVisible && x.ID == dto.CyUserID).Include(u => u.Account).FirstOrDefault();
-
-        //    var order = _mapper.Map<CyOrder>(dto);
-
-        //    order.CreateDate = dto.CreatDate;
-
-        //    var orderItems = _mapper.Map<List<CyOrderItem>>(dto.OrderItems);
-
-        //    order.OrderItems = orderItems;
-
-        //    var query = _db.CyProduct.Where(x => x.IsVisible && x.Supply != 0).ToList();
-
-
-        //    ///بهای تمام شده محصولات ==مجموع قیمتهای خرید
-        //    double? shopPrice = 0;
-
-
-
-        //    ///کم کردن از موجودی کالا 
-        //    foreach (var item in dto.OrderItems)
-        //    {
-        //        var currentProductAvalable = query.Where(x => x.ID == item.ProductID).FirstOrDefault();
-        //        if (currentProductAvalable == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
-
-
-        //        var currentProduct = query.Where(x => x.ID == item.ProductID && x.Supply >= item.Quantity).FirstOrDefault();
-
-        //        if (currentProduct == null) return BadRequest(new { msg = "موجودی کالا کمتر از تعداد وارد شده است ", product = item.PartNumber });
-
-        //        currentProduct.Supply -= item.Quantity;
-        //        shopPrice += currentProduct.ShopPrice;
-        //    }
-
-
-        //    /////ثبت سند حسابداری
-        //    Voucher newVoucher = new Voucher()
-        //    {
-        //        VoucherDate = DateTime.Now,
-        //        ReferenceType = ordermode == Ordermode.SaleToCustomer ? "فاکتور فروش" : "فاکتور برگشت از خرید",
-        //        ReferenceId = 0,
-        //        Description = dto.StatusText,
-        //        Items =
-        //        {
-        //            ///////سند کسر از موجودی 
-
-        //            ///کسر از موجودی کالا
-        //            new VoucherItem{
-        //                //AccountId=24,
-        //                //ToAccountId=14,
-
-        //                ////snDb2
-        //                AccountId=AccountSnDb.MojodiKala,
-        //                ToAccountId=AccountSnDb.BahayKala,
-        //                Debit=0,
-        //                Credit=shopPrice !=null ? (double)shopPrice : 0
-        //            },
-
-        //            ///ثبت هزینه بهای تمام‌شده کالای فروش‌رفته
-        //            new VoucherItem
-        //            {
-        //                //AccountId=14,
-        //                //ToAccountId=24,
-
-        //                ////snDb2
-        //                AccountId=AccountSnDb.BahayKala,
-        //                ToAccountId=AccountSnDb.MojodiKala,
-        //                Debit=shopPrice !=null ? (double)shopPrice : 0,
-        //                Credit=0
-        //            }, 
-
-
-
-        //            ////ثبت سند مشتری 
-
-        //            //بدهکار کردن مشتری
-        //            new VoucherItem
-        //            {
-        //                //ToAccountId=15,
-        //                AccountId=(int)user.AccountId,
-        //                ToAccountId=AccountSnDb.DarAmad,
-        //                Debit=(double)dto.FanalTotalAmount,
-        //                Credit=0
-        //            },
-        //            ///ثبت درآمد
-        //            new VoucherItem
-        //            {
-        //                //AccountId=15,
-        //                AccountId=AccountSnDb.DarAmad,
-        //                ToAccountId=(int)user.AccountId,
-        //                Debit=0,
-        //                Credit=(double)dto.FanalTotalAmount
-        //            },
-        //        }
-        //    };
-
-
-        //    foreach (var item in newVoucher.Items)
-        //    {
-        //        var currentAccount = await _db.Account.Where(x => x.IsVisible && x.ID == item.AccountId).FirstOrDefaultAsync();
-        //        currentAccount.MandehHesab = currentAccount.MandehHesab + item.Debit - item.Credit;
-        //        item.MandehHesab = currentAccount.MandehHesab;
-
-        //    }
-
-
-        //    ////جنریت کردن کد فاکتور
-        //    int nextFactorNum = await _db.CyOrder
-        //   .Select(f => (int?)f.FactorNumber)
-        //   .MaxAsync() ?? 0;
-        //    nextFactorNum += 1;
-        //    order.FactorNumber = nextFactorNum;
-        //    order.OrderMode = ordermode;
-
-        //    //await _db.CyOrderItem.AddRangeAsync(orderItems);
-        //    await _db.CyOrder.AddAsync(order);
-
-        //    newVoucher.ReferenceId = order.FactorNumber;
-
-        //    await _db.AddRangeAsync(newVoucher.Items);
-        //    await _db.Voucher.AddAsync(newVoucher);
-
-
-        //    await _db.SaveChangesAsync();
-
-        //    return Ok(new { order = order, factoNumber = nextFactorNum });
-        //}
-
-
-
 
 
         [HttpPut("editOrder")]
@@ -790,6 +661,13 @@ namespace CY_WebApi.Controllers
                 if (currentProduct == null) return BadRequest(new { msg = "این محصول درانبار موججود نیست", product = item.PartNumber });
 
                 double baePrice = item.UnitPrice;
+
+                ///برای اپدیت محصولات در سمت فروشگاه
+                item.ChangeQuantType = ChangeQuantityType.Added;
+                item.QuantityChange = item.Quantity;
+                item.IsSynced = false;
+                ////
+
 
                 currentProduct.Supply += item.Quantity;
                 shopPrice += currentProduct.ShopPrice;

@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using AutoMapper;
 using CY_BM;
 using CY_DM;
 using CY_WebApi.Migrations;
@@ -19,11 +20,13 @@ namespace CY_WebApi.Controllers
     public class CyProductsBController : ControllerBase
     {
         private readonly CyContext _db;
+        private readonly IMapper _mapper;
 
-        public CyProductsBController(CyContext db)
+        public CyProductsBController(CyContext db ,IMapper mapper)
         {
 
             _db = db;
+            _mapper = mapper;
         }
 
         [HttpGet("getAllProduct")]
@@ -492,6 +495,24 @@ namespace CY_WebApi.Controllers
             return Ok(products);
         }
 
+
+
+
+        [HttpGet("getChangingOrderItem")]
+        public async Task<ActionResult> getChangingOrderItem()
+        {
+            var orderItem=await _db.CyOrderItem.AsNoTracking().Where(x=>x.IsVisible && x.ChangeQuantType != ChangeQuantityType.NoChange && x.IsSynced == false).Select(s => new
+            {
+                productId=s.ProductID,
+                changeType=s.ChangeQuantType,
+                quntityChange=s.QuantityChange,
+                isSynced = s.IsSynced
+
+            }).ToListAsync();
+
+            return Ok(orderItem);
+
+        }
 
     }
 }

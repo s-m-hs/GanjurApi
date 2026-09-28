@@ -25,6 +25,12 @@ namespace CY_BM
         public string? Manufacturer { get; set; }
         public string? ProductCategory { get; set; }
         public string? Information { get; set; }
+
+        public ChangeQuantityType? ChangeQuantType { get; set; } = ChangeQuantityType.NoChange;
+
+        public int? QuantityChange { get; set; } = 0;
+
+        public bool? IsSynced { get; set; } = true;
     }
 
 

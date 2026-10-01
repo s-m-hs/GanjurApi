@@ -23,7 +23,7 @@ namespace CY_WebApi.Services
                     var username = decodedUsernamePassword.Split(':', 2)[0];
                     var password = decodedUsernamePassword.Split(':', 2)[1];
 
-                    if (username == "ganjur" && password == "z9<oOq=WcskUR5j1%")
+                    if (username == "ganjur" && password == "s@@ne@@6400720092")
                     {
                         await _next.Invoke(context);
                         return;

@@ -498,21 +498,43 @@ namespace CY_WebApi.Controllers
 
 
 
-        [HttpGet("getChangingOrderItem")]
-        public async Task<ActionResult> getChangingOrderItem()
-        {
-            var orderItem=await _db.CyOrderItem.AsNoTracking().Where(x=>x.IsVisible && x.ChangeQuantType != ChangeQuantityType.NoChange && x.IsSynced == false).Select(s => new
-            {
-                productId=s.ProductID,
-                changeType=s.ChangeQuantType,
-                quntityChange=s.QuantityChange,
-                isSynced = s.IsSynced
+        //[HttpGet("getChangingOrderItem")]
+        //public async Task<ActionResult> getChangingOrderItem()
+        //{
+        //    var orderItem=await _db.CyOrderItem.AsNoTracking().Where(x=>x.IsVisible && x.ChangeQuantType != ChangeQuantityType.NoChange && x.IsSynced == false).Select(s => new
+        //    {
+        //        productId=s.ProductID,
 
-            }).ToListAsync();
+        //        changeType=s.ChangeQuantType,
+        //        quntityChange=s.QuantityChange,
+        //        isSynced = s.IsSynced
 
-            return Ok(orderItem);
+        //    }).ToListAsync();
 
-        }
+        //    return Ok(orderItem);
+
+        //}
+
+
+        ///// <summary>
+        ///// برای زمانی کاربرد دارد که ممیخواهیم موجودی سایت با لیست اکسل آپدیت کنیم  ،ابتدا باید این کویری اجرا شود
+        ///// </summary>
+        ///// <returns></returns>
+        //[HttpGet("changeToSynced")]
+        //public async Task<ActionResult> changeToSynced()
+        //{
+
+        //    var orderItem = await _db.CyOrderItem.Where(x => x.IsVisible && x.ChangeQuantType != ChangeQuantityType.NoChange && x.IsSynced == false).ToListAsync();
+        //    foreach (var item in orderItem) { 
+        //    item.IsSynced = true;
+        //        item.QuantityChange = 0;
+        //    }
+
+        //    await _db.SaveChangesAsync();
+
+        //    return Ok(orderItem);
+
+        //}
 
     }
 }

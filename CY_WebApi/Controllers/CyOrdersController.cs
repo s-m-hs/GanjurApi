@@ -90,9 +90,9 @@ namespace CY_WebApi.Controllers
                         });
 
                     ///برای اپدیت محصولات در سمت فروشگاه
-                    item.ChangeQuantType = ChangeQuantityType.Minus;
-                    item.QuantityChange = item.Quantity;
-                    item.IsSynced = false;
+                    //item.ChangeQuantType = ChangeQuantityType.Minus;
+                    //item.QuantityChange = item.Quantity;
+                    //item.IsSynced = false;
                     ////
                     
                     product.Supply -= item.Quantity;
@@ -663,9 +663,9 @@ namespace CY_WebApi.Controllers
                 double baePrice = item.UnitPrice;
 
                 ///برای اپدیت محصولات در سمت فروشگاه
-                item.ChangeQuantType = ChangeQuantityType.Added;
-                item.QuantityChange = item.Quantity;
-                item.IsSynced = false;
+                //item.ChangeQuantType = ChangeQuantityType.Added;
+                //item.QuantityChange = item.Quantity;
+                //item.IsSynced = false;
                 ////
 
 

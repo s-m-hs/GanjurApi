@@ -1,14 +1,15 @@
-﻿using CY_DM;
+﻿using System.Security.Claims;
+using AutoMapper;
+using ClosedXML.Excel;
 using CY_BM;
+using CY_DM;
 using CY_WebApi.DataAccess;
 using CY_WebApi.Models;
+using CY_WebApi.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NuGet.Protocol.Core.Types;
-using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using CY_WebApi.Services;
-using System.Security.Claims;
+using NuGet.Protocol.Core.Types;
 
 namespace CY_WebApi.Controllers
 {
@@ -61,6 +62,71 @@ namespace CY_WebApi.Controllers
             return Ok(dto);
         }
 
+        /// <summary>
+        /// شماره کاربران خدمات در قالب فایل اکسل
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("ExportServicesExcel")]
+        public async Task<IActionResult> ExportServicesExcel()
+        {
+            var services = await _db.CyService
+                .Select(x => new
+                {
+                    x.Mobile,
+                    x.CustomerName,
+                    x.CreateDate
+                })
+                .ToListAsync();
 
+            using var workbook = new XLWorkbook();
+
+            var worksheet = workbook.Worksheets.Add("Services");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "شماره موبایل";
+            worksheet.Cell(1, 2).Value = "نام مشتری";
+            worksheet.Cell(1, 3).Value = "تاریخ ثبت";
+
+            // Data
+            for (int i = 0; i < services.Count; i++)
+            {
+                var row = i + 2;
+
+                worksheet.Cell(row, 1).Value = services[i].Mobile;
+                worksheet.Cell(row, 2).Value = services[i].CustomerName;
+
+                    worksheet.Cell(row, 3).Value = services[i].CreateDate;
+                    worksheet.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd HH:mm";
+                
+            }
+
+            // تنظیم عرض ستون‌ها
+            worksheet.Column(1).Width = 20;
+            worksheet.Column(2).Width = 30;
+            worksheet.Column(3).Width = 22;
+
+            // استایل Header
+            var header = worksheet.Range("A1:C1");
+            header.Style.Font.Bold = true;
+            header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            // فیلتر
+            worksheet.RangeUsed().SetAutoFilter();
+
+            // Freeze Header
+            worksheet.SheetView.FreezeRows(1);
+
+            using var stream = new MemoryStream();
+
+            workbook.SaveAs(stream);
+
+            var fileName = $"Services_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName
+            );
+        }
     }
 }

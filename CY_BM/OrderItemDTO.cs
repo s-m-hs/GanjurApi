@@ -19,8 +19,8 @@ namespace CY_BM
         [Required]
         public int Quantity { get; set; }
 
-        public int UnitPrice { get; set; }
-        public int TotalPrice { get; set; }
+        public double UnitPrice { get; set; }
+        public double TotalPrice { get; set; }
 
         public string? Manufacturer { get; set; }
         public string? ProductCategory { get; set; }

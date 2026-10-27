@@ -232,7 +232,7 @@ namespace CY_WebApi.Controllers
         [HttpGet("getUserAccountByCode")]
         async public Task<ActionResult> getUserAccountByCode(string code, bool isDebit = true)
         {
-            var accounts =await _db.Account.Where(x => x.IsVisible && x.Code.StartsWith(code)).Include(i => i.CyUser).OrderBy(o => o.Title).ToListAsync();
+            var accounts = await _db.Account.Where(x => x.IsVisible && x.Code.StartsWith(code)).Include(i => i.CyUser).OrderBy(o => o.Title).ToListAsync();
 
             var accountIdList = accounts.Select(x => x.ID).ToList();
 
@@ -245,7 +245,7 @@ namespace CY_WebApi.Controllers
                 .Where(v => v.IsVisible && v.AccountId == item.ID)
                 .SumAsync(v => v.Debit - v.Credit);
 
-                item.MandehHesab=balance;
+                item.MandehHesab = balance;
             }
 
             await _db.SaveChangesAsync();
@@ -490,7 +490,7 @@ namespace CY_WebApi.Controllers
                 phone = s.CyUser.Phone,
                 userId = s.CyUser.ID,
 
-            }).OrderBy(o => o.userName).OrderByDescending(o=>o.mandeh).ToList();
+            }).OrderBy(o => o.userName).OrderByDescending(o => o.mandeh).ToList();
 
 
 
@@ -503,7 +503,7 @@ namespace CY_WebApi.Controllers
             worksheet.Cell(1, 3).Value = "تلفن ";
             worksheet.Cell(1, 4).Value = " مانده حساب";
             worksheet.Cell(1, 5).Value = "ID ";
-   
+
 
             // Data
             int row = 2;
@@ -541,6 +541,90 @@ namespace CY_WebApi.Controllers
 
 
 
+        /// <summary>
+        /// اکسل از سررسید بدهکاران
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="isDebit"></param>
+        /// <returns></returns>
+        [HttpPost("getExellTasviehDate")]
+        async public Task<ActionResult> getExellTasviehDate([FromBody] List<TasviehDateDTO> dto)
+        {
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Users");
+
+            // Header
+            worksheet.Cell(1, 1).Value = "نام طرف حساب";
+            worksheet.Cell(1, 2).Value = "همراه";
+            worksheet.Cell(1, 3).Value = "تلفن ";
+            worksheet.Cell(1, 4).Value = " مانده حساب";
+            worksheet.Cell(1, 5).Value = "ID ";
+
+
+            // Data
+            int row = 2;
+            foreach (var item in dto)
+            {
+                worksheet.Cell(row, 1).Value = item.UserName;
+                worksheet.Cell(row, 2).Value = item.Mobile;
+                worksheet.Cell(row, 3).Value = item.Phone;
+                worksheet.Cell(row, 4).Value = item.OrderMount;
+ 
+                worksheet.Cell(row, 5).Value = item.OrderId;
+                row++;
+            }
+
+            // Auto fit columns
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Users.xlsx"
+            );
+        }
+
+
+
+        [HttpGet("getTasviehDate")]
+        public async Task<ActionResult> getTasviehDate()
+        {
+            var TasviehDateLists = await _db.CyOrder.AsNoTracking().Where(x=>x.IsVisible && x.TasviehDate <= DateTime.Now).Select(s=>new TasviehDateDTO
+            {
+                UserName=s.CyUser.CyUsNm,
+                Mobile=s.CyUser.Mobile,
+                Phone=s.CyUser.Phone,
+                TasviehDate=s.TasviehDate,
+                OrderMount=s.TotalAmount,
+                OrderId=s.ID
+
+            }).ToListAsync();
+
+            return Ok(TasviehDateLists);
+        }
+
+
+        public class TasviehDateDTO
+        {
+            public string UserName { get; set; }
+
+            public string? Mobile { get; set; }
+
+            public string? Phone { get; set; }
+
+            public DateTime? TasviehDate { get; set; }
+
+            public double? OrderMount { get; set; }
+            public int OrderId { get; set; }
+
+
+
+        }
 
     }
 }

@@ -621,6 +621,9 @@ namespace CY_WebApi.Migrations
                     b.Property<string>("StatusText")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("TasviehDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<double>("Taxes")
                         .HasColumnType("float");
 

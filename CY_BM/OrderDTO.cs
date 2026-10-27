@@ -39,6 +39,9 @@ namespace CY_BM
 
         public double Cost { get; set; } = 0;
 
+        public DateTime? TasviehDate { get; set; }
+
+
         public ICollection<OrderItemDTO>? OrderItems { get; set; }
     }
     public class OrderBDTO

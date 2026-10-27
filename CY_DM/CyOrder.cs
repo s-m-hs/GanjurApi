@@ -47,6 +47,8 @@ namespace CY_DM
         /// </summary>
         public double Cost { get; set; } = 0;
 
+        public DateTime? TasviehDate { get; set; }
+
         public ICollection<CyOrderItem>? OrderItems { get; set; }
 
     }

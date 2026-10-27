@@ -38,9 +38,7 @@ namespace CY_WebApi.Controllers
         /// <returns></returns>
         /// 
         [HttpPost("addOrder")]
-        public async Task<ActionResult> AddOrder(
-    [FromBody] OrderDTO dto,
-    Ordermode ordermode)
+        public async Task<ActionResult> AddOrder( [FromBody] OrderDTO dto,Ordermode ordermode)
         {
             if (dto.OrderItems == null || !dto.OrderItems.Any())
                 return BadRequest(new { msg = "محصولی اضافه نشده است" });

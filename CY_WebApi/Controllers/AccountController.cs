@@ -594,14 +594,14 @@ namespace CY_WebApi.Controllers
         [HttpGet("getTasviehDate")]
         public async Task<ActionResult> getTasviehDate()
         {
-            var TasviehDateLists = await _db.CyOrder.AsNoTracking().Where(x=>x.IsVisible && x.TasviehDate <= DateTime.Now).Select(s=>new TasviehDateDTO
+            var TasviehDateLists = await _db.CyOrder.AsNoTracking().Where(x=>x.IsVisible && x.TasviehDate <= DateTime.Now && x.IsTasvieh==false).Select(s=>new TasviehDateDTO
             {
                 UserName=s.CyUser.CyUsNm,
                 Mobile=s.CyUser.Mobile,
                 Phone=s.CyUser.Phone,
                 TasviehDate=s.TasviehDate,
                 OrderMount=s.TotalAmount,
-                OrderId=s.ID
+                OrderId= (int)s.FactorNumber
 
             }).ToListAsync();
 

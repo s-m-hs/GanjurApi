@@ -41,6 +41,8 @@ namespace CY_BM
 
         public DateTime? TasviehDate { get; set; }
 
+        public bool? IsTasvieh { get; set; } = true;
+
 
         public ICollection<OrderItemDTO>? OrderItems { get; set; }
     }
@@ -70,6 +72,9 @@ namespace CY_BM
         public double Discount { get; set; } = 0;
 
         public double Cost { get; set; } = 0;
+
+        public DateTime? TasviehDate { get; set; }
+        public bool? IsTasvieh { get; set; } = true;
 
         public ICollection<OrderItemByIdDTO>? OrderItems { get; set; }
     }

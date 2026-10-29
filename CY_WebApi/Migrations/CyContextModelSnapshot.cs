@@ -603,6 +603,9 @@ namespace CY_WebApi.Migrations
                     b.Property<double?>("FanalTotalAmount")
                         .HasColumnType("float");
 
+                    b.Property<bool?>("IsTasvieh")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsVisible")
                         .HasColumnType("bit");
 

@@ -38,7 +38,7 @@ namespace CY_WebApi.Controllers
         /// <returns></returns>
         /// 
         [HttpPost("addOrder")]
-        public async Task<ActionResult> AddOrder( [FromBody] OrderDTO dto,Ordermode ordermode)
+        public async Task<ActionResult> AddOrder([FromBody] OrderDTO dto, Ordermode ordermode)
         {
             if (dto.OrderItems == null || !dto.OrderItems.Any())
                 return BadRequest(new { msg = "محصولی اضافه نشده است" });
@@ -92,7 +92,7 @@ namespace CY_WebApi.Controllers
                     //item.QuantityChange = item.Quantity;
                     //item.IsSynced = false;
                     ////
-                    
+
                     product.Supply -= item.Quantity;
                     shopPrice += (product.ShopPrice ?? 0) * item.Quantity;
                 }
@@ -489,7 +489,7 @@ namespace CY_WebApi.Controllers
             }
         }
 
-  
+
 
         /// <summary>
         /// ویرایش فاکتور خرید
@@ -834,6 +834,7 @@ namespace CY_WebApi.Controllers
 
             return Ok(dto);
         }
+
         [HttpGet("getOrderDetailId")]
         public async Task<ActionResult> getOrderDetailId(int id)
         {
@@ -858,7 +859,26 @@ namespace CY_WebApi.Controllers
             return ((price / 10000) + 1) * 10000;
         }
 
+        /// <summary>
+        /// Toggles the IsTasvieh status of the order identified by the specified factor number.
+        /// </summary>
+        /// <param name="factorNum">The factor number used to identify the order.</param>
+        /// <returns>An ActionResult indicating the success or failure of the operation.</returns>
+        [HttpGet("isTasvieh")]
+        async public Task<ActionResult> isTasvieh(int factorNum)
+        {
+            var currentOrder = await _db.CyOrder.
+                Where(x => x.IsVisible && x.FactorNumber == factorNum).FirstOrDefaultAsync();
+            if (currentOrder == null) return BadRequest("order NotDound");
 
+            currentOrder.IsTasvieh = !currentOrder.IsTasvieh;
+
+            await _db.SaveChangesAsync();
+
+            return Ok(currentOrder.IsTasvieh);
+
+        }
 
     }
 }
+
